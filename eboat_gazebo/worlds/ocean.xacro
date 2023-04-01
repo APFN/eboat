@@ -1,0 +1,83 @@
+<?xml version="1.0" ?>
+
+<!-- Macro to insert the ocean in the world -->
+<world xmlns:xacro="http://ros.org/wiki/xacro">
+	<xacro:macro name="ocean">
+		<scene>
+			<sky>
+				<clouds>
+					<speed>12</speed>
+				</clouds>
+			</sky>
+			<grid>0</grid>
+			<origin_visual>0</origin_visual>
+		</scene>
+
+        <spherical_coordinates>
+            <surface_model>EARTH_WGS84</surface_model>
+            <world_frame_orientation>ENU</world_frame_orientation>
+            <latitude_deg>43.08</latitude_deg>
+            <longitude_deg>22.92</longitude_deg>
+            <elevation>0.0</elevation>
+            <!-- For legacy gazebo reasons, need to rotate -->
+            <!--<heading_deg>180</heading_deg>-->
+        </spherical_coordinates>
+
+        <physics type="ode">
+            <ode>
+                <solver>
+                    <type>world</type>
+                </solver>
+            </ode>
+            <max_step_size>0.01</max_step_size>
+            <real_time_update_rate>1000</real_time_update_rate>
+        </physics>
+        <gravity>0.0 0.0 -9.81</gravity>
+        
+		
+        <!-- Fonte de luz global -->
+        <include>
+            <uri>model://sun</uri>
+        </include>
+
+        <!--Simple island-->
+        <!--<include>
+            <name>sand_island_0</name>
+            <pose>100.0 100.0 -1.0 0 0 0</pose>
+            <uri>model://sand_island_0</uri>
+        </include>-->
+
+        <!-- Buoy to indicate the point where the boat should go-->
+        <!-- <include>
+            <name>buoy_yellow</name>
+            <pose>100.0 100.0 0.0 0 0 0</pose>
+            <uri>/eboat_ws/src/eboat_gz_1/eboat_description/models/buoy_yellow</uri>
+        </include> -->
+
+        <!-- Green Buoy-->
+        <!--<include>
+            <name>buoy_green</name>
+            <pose>10.0 50.0 0.0 0 0 0</pose>
+            <uri>/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/buoy_green</uri>
+        </include>-->
+
+        <!-- Red Buoy-->
+        <!--<include>
+            <name>buoy_red</name>
+            <pose>20.0 70.0 0.0 0 0 0</pose>
+            <uri>/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/buoy_red</uri>
+        </include>-->
+
+        <!--Marker to indicate the effort center for the wind forces-->
+        <include>
+            <name>wayPointMarker</name>
+            <pose>0 100.0 0 0 0 0</pose>
+            <uri>/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wayPointMarker</uri>
+        </include>
+
+        <!-- Plugin to control atmosferic physics-->
+        <plugin name="atmosferic_control" filename="libAtmosfericControlPlugin.so"/>
+	
+	</xacro:macro>
+
+</world>

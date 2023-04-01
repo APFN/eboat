@@ -1,0 +1,33 @@
+name: teste
+
+channels:
+  - defaults
+  - conda-forge
+  - nvidia
+  - pytorch
+  
+dependencies:
+  - python=3.7
+  - pip
+  - gtk3
+  - numpy
+  - wxpython
+  - mesa-libgl-cos6-x86_64
+  - pytorch::pytorch=1.13.1
+  - pytorch::pytorch-cuda=11.7
+  - pytorch::torchvision
+  - pytorch::torchaudio
+  - conda-forge::pyyaml
+  - conda-forge::rospkg
+  - conda-forge::defusedxml
+  - conda-forge::netifaces
+  - conda-forge::freeglut
+  - conda-forge::tqdm
+  - conda-forge::rich
+  - conda-forge::tensorflow-cpu
+  - conda-forge::opencv
+  - pip:
+    - gym
+    - stable-baselines3
+  
+prefix: /home/eduardo/miniconda3/envs/teste

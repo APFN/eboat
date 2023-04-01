@@ -1,0 +1,60 @@
+<?xml version="1.0" ?>
+
+<robot name="buoy_yellow">
+
+    <link name="base_link">
+    </link>
+
+    <joint name="dummy_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="buoy_link"/>
+        <!-- Adjust the visual/collision to match water height -->
+        <origin xyz="0 0 0.210586" rpy="0 0 0"/>
+    </joint>
+
+    <link name="buoy_link">
+        <visual>
+            <origin xyz="-3.01165 -0.0322131 -1.31799" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://eboat_description/models/buoy/meshes/part_1.stl"/>
+            </geometry>
+            <material name="part_1_material">
+                <color rgba="0.615686 0.811765 0.929412 1.0"/>
+            </material>
+        </visual>
+        <!--<collision>
+            <origin xyz="-3.01165 -0.0322131 -1.31799" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://eboat_description/models/buoy/meshes/part_1.stl"/>
+            </geometry>
+        </collision>-->
+        <collision>
+            <origin xyz="0 0 -0.1" rpy="0 -0 0" />
+            <geometry>
+                <cylinder radius="1.2" length="3.85"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="-3.01165 -0.0322131 -1.31799" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://eboat_description/models/buoy/meshes/part_2.stl"/>
+            </geometry>
+            <material name="part_2_material">
+                <color rgba="0.615686 0.811765 0.929412 1.0"/>
+            </material>
+        </visual>
+        <!--<collision>
+            <origin xyz="-3.01165 -0.0322131 -1.31799" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://eboat_description/models/buoy/meshes/part_2.stl"/>
+            </geometry>
+        </collision>-->
+        <inertial>
+            <origin xyz="-3.01165 -0.0322131 -1.14268" rpy="0 0 0"/>
+            <mass value="840.322" />
+            <inertia ixx="702.387" ixy="-2.17443e-16"  ixz="-2.64187e-16" iyy="702.387" iyz="-6.22749e-17" izz="281.791" />
+        </inertial>
+    </link>
+
+</robot>

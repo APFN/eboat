@@ -1,0 +1,14 @@
+name: ctrgui
+
+channels:
+  - defaults
+  - conda-forge
+  
+dependencies:
+  - python=3.7
+  - gtk3
+  - numpy
+  - ros-rospy
+  - wxpython
+  
+prefix: ${HOME}/miniconda3/envs/ctrgui 
