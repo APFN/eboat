@@ -2,7 +2,7 @@
 *.npy
 
 # ignore zip
-*.zip
+#*.zip
 
 fboat_data*.py
 
