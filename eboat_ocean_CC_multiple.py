@@ -247,7 +247,7 @@ def runTrainingv0(env, logdir, sufix="model1"):
         with open(model_path, 'r') as model_file:
             model_xml = model_file.read()
             time.sleep(2)
-            env.save_waypoint()#salva coordenadas do waypoint para plotar
+            env.save_waypoint()# salva coordenadas do waypoint para plotar
             print("Abriu modelo do waypoint")
         try:                    
             spawn_model("wayPointMarker",
