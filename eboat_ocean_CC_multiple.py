@@ -33,8 +33,6 @@ from gazebo_msgs.srv import SetModelState, SpawnModel, DeleteModel, GetWorldProp
 from gazebo_msgs.msg import ModelState
 from tf.transformations import quaternion_from_euler
 
-
-
 #função para fechar tudo corretamente      
 def signal_handler(sig, frame):
     # Esperar todos processos do gazebo e ros fecharem
@@ -208,12 +206,11 @@ def runTrainingv0(env, logdir, sufix="model1"):
                                             sufix           = sufix)
     print("##### saiu do runPPo ######")
     
-    # SAVESTEPS = 100+1
-    # TIMESTEPS = 2048*5
+    SAVESTEPS = 100+1
+    TIMESTEPS = 2048*5
     
-    SAVESTEPS = 1+1
-    TIMESTEPS = 50*1
-
+    # SAVESTEPS = 1+1
+    # TIMESTEPS = 50*1
      #-->DEFINE NAVIGATION PATH
     # navpath = [[-100, 0, 0.5],
     #            [0, 100, 0.5],
@@ -231,7 +228,7 @@ def runTrainingv0(env, logdir, sufix="model1"):
     start     = time.time()
     model.save(f"{models_dir}/eboat_ocean_0")
     
-   
+        
     
     waypoint_count=0
     for waypoint in navpath:
@@ -247,7 +244,6 @@ def runTrainingv0(env, logdir, sufix="model1"):
         with open(model_path, 'r') as model_file:
             model_xml = model_file.read()
             time.sleep(2)
-            env.save_waypoint()# salva coordenadas do waypoint para plotar
             print("Abriu modelo do waypoint")
         try:                    
             spawn_model("wayPointMarker",
@@ -277,10 +273,8 @@ def runTrainingv0(env, logdir, sufix="model1"):
             print(f"Average time per iteration  : {htime(avtime)}")
             print(f"Elapsed time                : {htime(timeB - start)}")
             print(f"Remaining time              : {htime((SAVESTEPS - i)*avtime)}")
+        
         waypoint_count+=1
-        env.get_plot()#plota
-    env.get_plot()#ao dinal de tudo, plota
-
        
 
 def setWayPoint(model_name="wayPointMarker", Pos = None):

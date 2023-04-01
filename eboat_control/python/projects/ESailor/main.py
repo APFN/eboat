@@ -13,6 +13,8 @@ from geometry_msgs.msg import Pose
 
 from plot_coordinates import PlotCoordinates
 
+import threading
+
 from stable_baselines3 import PPO
 
 
@@ -40,23 +42,41 @@ def main():
     #-->LOAD AGENT USING STABLE-BASELINES3
     model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/modelo-edu/eboat_ocean_100.zip")
     
-    #-->DEFINE NAVIGATION PATH Edu
-    navpath = [[0.0     , 100.0, 0.5],
-               [83.5165 , 155.0, 0.5],
-               [181.4961, 175.0, 0.5],
-               [281.4961, 175.0, 0.5],
-               [354.8173, 243.0, 0.5]]
+    #-->DEFINE NAVIGATION PATH
+    # navpath = [[0.0     , 100.0, 0.5],
+    #            [83.5165 , 155.0, 0.5],
+    #            [181.4961, 175.0, 0.5],
+    #            [281.4961, 175.0, 0.5],
+    #            [354.8173, 243.0, 0.5]]
     
+    #  #-->DEFINE NAVIGATION PATH
+    # navpath = [[0, 0, 0.5],
+    #            [0, 100, 0.5],
+    #            [0, 0, 0.5],
+    #            [50, 50, 0.5],
+    #            [0, 100, 0.5],
+    #            [0, 0, 0.5]]
 
-    #->DEFINE NAVIGATION PATH Alvaro
-    # navpath = [[0.0, 100.0, 0.5],
-    #            [-100, 0, 0.5],
-    #            [100, 0, 0.5],
-    #            [-100, 0, 0.5],
+
+    # #-->DEFINE NAVIGATION PATH
+    # navpath = [[-100, 0, 0.5],
     #            [0, 100, 0.5],
     #            [100, 0, 0.5],
     #            [0, -100, 0.5],
-    #            [-100, 0, 0.5]]
+    #            [75, 75, 0.5],
+    #            [75, -75, 0.5],
+    #            [-75, -75, 0.5],
+    #            [-75, 75, 0.5]]
+
+    #->DEFINE NAVIGATION PATH
+    navpath = [[0.0, 100.0, 0.5],
+               [-100, 0, 0.5],
+               [100, 0, 0.5],
+               [-100, 0, 0.5],
+               [0, 100, 0.5],
+               [100, 0, 0.5],
+               [0, -100, 0.5],
+               [-100, 0, 0.5]]
 
     #-->RESET SIMULATION
     rospy.wait_for_service('/gazebo/reset_simulation')
