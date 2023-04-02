@@ -18,7 +18,12 @@ from gazebo_msgs.srv import SetModelState
 from gazebo_msgs.msg import ModelState
 
 class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
+    
     def __init__(self):   
+        print("#################### entrou no CC0 ###################")
+
+        self.reward_global = 0
+
         self.EBOAT_HOME = "/home/alvaro/eboat_ws/src/eboat_gz_1"
         gazebo_env.GazeboEnv.__init__(self, os.path.join(self.EBOAT_HOME,"eboat_gazebo/launch/ocean.launch"))
 
@@ -143,12 +148,12 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
 
     def actionRescale(self, action):
         raction = np.zeros(3, dtype = np.float32)
-        #--> Eletric propulsion [-5, 5]
-        raction[0] = action[0] * 5.0
+        # #--> Eletric propulsion [-5, 5]
+        # raction[0] = action[0] * 5.0
         #--> Boom angle [0, 90]
-        raction[1] = (action[1] + 1) * 45.0
+        raction[1] = (action[0] + 1) * 45.0
         #--> Rudder angle [-60, 60]
-        raction[2] = action[2] * 60.0
+        raction[2] = action[1] * 60.0
         return raction
 
     def rescale(self, m, rmin, rmax, tmin, tmax):
@@ -190,6 +195,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
 
     
     def step(self, action):
+        #print("#################### step no CC0 ###################")
         #--> UNPAUSE SIMULATION
         rospy.wait_for_service("/gazebo/unpause_physics")
         try:
@@ -202,9 +208,9 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         # print(f"---> action = {action}")
         # print(f"---> ract   = {ract}")
         #desliga e liga motor
-        self.propVel_pub.publish(int(0))
-        self.boomAng_pub.publish(ract[1])
-        self.rudderAng_pub.publish(ract[2])
+        #self.propVel_pub.publish(int(0)) # quando o espaço de observações for 2
+        self.boomAng_pub.publish(ract[0])
+        self.rudderAng_pub.publish(ract[1])
 
         
         #-->GET OBSERVATIONS (NEXT STATE)
@@ -252,7 +258,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         
         #-->COMPUTES THE REWARD
         if not done:
-            # print("COMPUTES THE REWARD: not done")
+            #print("COMPUTES THE REWARD: not done")
             reward  = self.rewardFunction(observations)
             #print(reward)
             self.DPREV = dist                               #-->UPDATE CURRENT DISTANCE
@@ -260,12 +266,16 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
             #print("COMPUTES THE REWARD: dist > self.DMAX")
             reward = -1
         else:
-            # print("COMPUTES THE REWARD: else")
+            #print("COMPUTES THE REWARD: else")
             reward = 1
+        
+        self.reward_global = self.reward_global + reward
+        #print("Reward global:", self.reward_global)
 
         return self.observationRescale(observations), reward, done, {}
 
     def reset(self):
+        print("#################### reset no CC0 ###################")
         #-->RESETS THE STATE OF THE ENVIRONMENT.
         rospy.wait_for_service('/gazebo/reset_simulation')
 
@@ -318,12 +328,17 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
             self.DPREV = self.D0
         except:
             pass
-
+        
+        print("Reward global:", self.reward_global)
         return self.observationRescale(observations)
 
 
 class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
     def __init__(self):
+        #print("#################### entrou no CC1 ###################")
+
+        self.reward_global = 0
+
         self.EBOAT_HOME = "/home/alvaro/eboat_ws/src/eboat_gz_1"
         gazebo_env.GazeboEnv.__init__(self, os.path.join(self.EBOAT_HOME, "eboat_gazebo/launch/ocean.launch"))
 
@@ -345,7 +360,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         # --> We will use a rescaled action space
         self.action_space = spaces.Box(low=-1,
                                        high=1,
-                                       shape=(3,),
+                                       shape=(2,),
                                        dtype=np.float32)
 
         # --> We will use a rescaled action space
@@ -420,6 +435,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         self.setInitialState(model_name, theta)
 
     def reset(self):
+        print("#################### reset no CC1 ###################")
         #-->RESETS THE STATE OF THE ENVIRONMENT.
         rospy.wait_for_service('/gazebo/reset_simulation')
         try:
@@ -457,12 +473,15 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
             self.pause()
         except( rospy.ServiceException) as e:
             print(("/gazebo/pause_physics service call failed!"))
+        
+        print("Reward global:", self.reward_global)
 
         return self.observationRescale(observations)
 
 
 class GazeboOceanEboatEnvCC2(gazebo_env.GazeboEnv):
     def __init__(self):
+        #print("#################### entrou no CC2 ###################")
         self.EBOAT_HOME = "/home/alvaro/eboat_ws/src/eboat_gz_1"
 
         #-->GAZEBO ENVIRONMENT LAUNCH FILE
@@ -710,6 +729,7 @@ class GazeboOceanEboatEnvCC2(gazebo_env.GazeboEnv):
         print(f"ENERGY = 0.01 * {abs(self.BOOM0 - obs[5])} + 0.02 * {abs(self.RUDDER0 - obs[6])} + 0.5 * {abs(obs[7])} = {self.ENERGY}")
 
     def step(self, action):
+        #print("#################### step no CC2 ###################")
         # --> UNPAUSE SIMULATION
         rospy.wait_for_service("/gazebo/unpause_physics")
         try:
@@ -783,6 +803,7 @@ class GazeboOceanEboatEnvCC2(gazebo_env.GazeboEnv):
         return self.observationRescale(observations), reward, done, {}
 
     def reset(self):
+        #print("#################### reset no CC2 ###################")
         # -->RESETS THE STATE OF THE ENVIRONMENT.
         rospy.wait_for_service('/gazebo/reset_simulation')
         try:

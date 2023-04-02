@@ -68,15 +68,17 @@ def main():
     #            [-75, -75, 0.5],
     #            [-75, 75, 0.5]]
 
-    #->DEFINE NAVIGATION PATH
-    navpath = [[0.0, 100.0, 0.5],
-               [-100, 0, 0.5],
-               [100, 0, 0.5],
-               [-100, 0, 0.5],
-               [0, 100, 0.5],
-               [100, 0, 0.5],
-               [0, -100, 0.5],
-               [-100, 0, 0.5]]
+    # #->DEFINE NAVIGATION PATH
+    # navpath = [[0.0, 100.0, 0.5],
+    #            [-100, 0, 0.5],
+    #            [100, 0, 0.5],
+    #            [-100, 0, 0.5],
+    #            [0, 100, 0.5],
+    #            [100, 0, 0.5],
+    #            [0, -100, 0.5],
+    #            [-100, 0, 0.5]]
+
+    navpath = [[0.0, 100.0, 0.5]]
 
     #-->RESET SIMULATION
     rospy.wait_for_service('/gazebo/reset_simulation')
@@ -140,9 +142,9 @@ def main():
 
             #-->SEND ACTIONS TO THE CONTROL INTERFACE
             #propVel_pub.publish(int(actions[0])) #com motor
-            propVel_pub.publish(int(0)) #sem motor
-            boomAng_pub.publish(actions[1])
-            rudderAng_pub.publish(actions[2])
+            # propVel_pub.publish(int(0)) #sem motor
+            boomAng_pub.publish(actions[0])
+            rudderAng_pub.publish(actions[1])
 
             # -->COLLECT OBSERVATIONS
             observations = getObservations()[:5] 
@@ -224,13 +226,13 @@ def observationRescale(observations):
     return robs
 
 def actionRescale(action):
-    raction = np.zeros(3, dtype = np.float32)
-    #--> Eletric propulsion [-5, 5]
-    raction[0] = action[0] * 5.0
+    raction = np.zeros(2, dtype = np.float32)
+    # #--> Eletric propulsion [-5, 5]
+    # raction[0] = action[0] * 5.0
     #--> Boom angle [0, 90]
-    raction[1] = (action[1] + 1) * 45.0
+    raction[0] = (action[0] + 1) * 45.0
     #--> Rudder angle [-60, 60]
-    raction[2] = action[2] * 60.0
+    raction[1] = action[1] * 60.0
     return raction
 
 def vet2str(vet):

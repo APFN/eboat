@@ -181,8 +181,10 @@ def runTrainingv0(env, logdir, sufix="model1"):
                                             policy_kwargs   = policy_kwargs,
                                             sufix           = sufix)
     print("##### saiu do runPPo ######")
-    SAVESTEPS = 100+1
-    TIMESTEPS = 2048*5
+    # SAVESTEPS = 100+1
+    # TIMESTEPS = 2048*5
+    SAVESTEPS = 10
+    TIMESTEPS = 200
     start     = time.time()
     model.save(f"{models_dir}/eboat_ocean_0")
     for i in range(1, SAVESTEPS):
@@ -197,7 +199,6 @@ def runTrainingv0(env, logdir, sufix="model1"):
                     )        
         print("#### saiu do learn ###")
         model.save(f"{models_dir}/eboat_ocean_{i}")
-
         timeB  = time.time()
         avtime = (timeB - start) / i
         print(f"Time spent in this iteration: {htime(timeB - timeA)}")
@@ -247,7 +248,7 @@ def main():
     if not os.path.exists(logdir):
         os.makedirs(logdir)
 
-    training_version = 0
+    training_version = 1
 
     if training_version == 0:
         env = gym.make('GazeboOceanEboatEnvCC-v0')
