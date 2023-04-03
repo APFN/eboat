@@ -17,6 +17,14 @@ from tf.transformations import quaternion_from_euler
 from gazebo_msgs.srv import SetModelState
 from gazebo_msgs.msg import ModelState
 
+def vet2str(vet):
+    vetstr = "["
+    for val in vet:
+        vetstr += "{:5.3f}, ".format(val)
+    vetstr += "]"
+    vetstr.replace(",]", "]")
+    return vetstr
+
 class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
     
     def __init__(self):   
@@ -45,7 +53,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         #--> We will use a rescaled action space
         self.action_space = spaces.Box(low   = -1 ,
                                        high  = 1  ,
-                                       shape = (3,),
+                                       shape = (2,),
                                        dtype = np.float32)
 
         # --> We will use a rescaled action space
@@ -85,14 +93,29 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         return self.windSpeed
 
     def sampleWindSpeed(self, max_wind_speed = 12):
-        mws2 = max_wind_speed * max_wind_speed
-        ws   = (2 * np.random.rand(2) - 1) * max_wind_speed
-        while (ws[0]*ws[0] + ws[1]*ws[1]) > mws2:
-            ws = (2 * np.random.rand(2) - 1) * max_wind_speed
-        self.windSpeed[:2] = ws
+        angle = np.random.uniform(low=-180, high=180) * math.pi / 90
+        magnitude = np.random.uniform(low=3, high=12)
+        x = magnitude * math.cos(angle)
+        y = magnitude * math.sin(angle)
+        self.windSpeed[:2] = [x,y]
+        if np.random.uniform() < 0.3: # 30% das vezes é vento contra. "na cara"
+            self.windSpeed[:2] = [0,(magnitude*-1)]
+        #print(self.windSpeed)
 
     def rewardFunction(self, obs):
+        #--> Reward;Penalty by decresing/increasing the distance from the goal.
         reward = (self.DPREV - obs[0]) / self.D0
+
+        if obs[2] < 0.4:
+            #--> Have a velocity slower than 0.4 m/s or negative generate a penalty.
+            reward -= 0.2
+        elif (abs(obs[1]) < 60):
+            #--> Have a velocity greater than 0.4 m/s toward the objective generates a reward.
+            reward += 0.01 * (1.0 - abs(obs[1]) / 60.0)
+
+            if ((obs[2] > 1.0) & (obs[7] == 0)):
+                #--> Reward for boat speedy greater than 1.0 m/s if the electric engine is offline.
+                reward += 0.1
 
         return reward
 
@@ -151,9 +174,9 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         # #--> Eletric propulsion [-5, 5]
         # raction[0] = action[0] * 5.0
         #--> Boom angle [0, 90]
-        raction[1] = (action[0] + 1) * 45.0
+        raction[0] = (action[0] + 1) * 45.0
         #--> Rudder angle [-60, 60]
-        raction[2] = action[1] * 60.0
+        raction[1] = action[1] * 60.0
         return raction
 
     def rescale(self, m, rmin, rmax, tmin, tmax):
@@ -192,7 +215,6 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
-
     
     def step(self, action):
         #print("#################### step no CC0 ###################")
@@ -216,6 +238,8 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         #-->GET OBSERVATIONS (NEXT STATE)
         observations = self.getObservations()
 
+        #print(f"{vet2str(observations)} --> {vet2str(action)}")
+
         #-->PAUSE SIMULATION
         rospy.wait_for_service("/gazebo/pause_physics")
         try:
@@ -235,7 +259,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         # print("self.DMAX ", self.DMAX )
         # print("(observations[8] > 60.0)",(observations[8] > 60.0))
         # print("np.isnan(observations).any())",np.isnan(observations).any())
-        done = bool((dist <= 5) | (dist > self.DMAX) | (observations[8] > 60.0) | (np.isnan(observations).any())) #--> Considering that the distance is measured in meters
+        done = bool((dist <= 10) | (dist > self.DMAX) | (observations[8] > 60.0) | (np.isnan(observations).any())) #--> Considering that the distance is measured in meters
         #print("done: ", done)
         # print("\n\n-------------------------------------")
         #print("################################################ D0:", self.D0)
@@ -266,8 +290,9 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
             #print("COMPUTES THE REWARD: dist > self.DMAX")
             reward = -1
         else:
-            #print("COMPUTES THE REWARD: else")
-            reward = 1
+            print("COMPUTES THE REWARD: DONE")
+            reward  = 100
+            self.reset()
         
         self.reward_global = self.reward_global + reward
         #print("Reward global:", self.reward_global)
@@ -387,7 +412,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
 
         # --> SUPPORT FOR RANDOM INITIALIZATION OF WIND SPEED AND DIRECTION
         np.random.seed(20)
-        self.max_wind_speed = 15
+        self.max_wind_speed = 6
         self.P = np.arange(-180, 181, 20)
         self.P[0] += 1
         self.A = np.arange(-180, 181, 5)
@@ -407,7 +432,8 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
     def getWindSpeed(self):
         return self.windSpeed
 
-    def sampleInitialState(self, model_name, max_wind_speed=12):
+    def sampleInitialState(self, model_name, max_wind_speed=6):
+        #print("############entrou no sampleInitialState CC1")
         speed = max_wind_speed * np.random.sample(size=1)
         s     = int(speed)
         k0    = self.count[s, 0]
@@ -431,11 +457,13 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         ws = self.rot(speed, theta)
         self.windSpeed[:2] = ws
 
+        self.sampleWindSpeed() # !!!!!! reecreve em cima dos ventos sorteados antes
+
         #--> Set the boat's initial pose
         self.setInitialState(model_name, theta)
 
     def reset(self):
-        print("#################### reset no CC1 ###################")
+        #print("#################### reset no CC1 ###################")
         #-->RESETS THE STATE OF THE ENVIRONMENT.
         rospy.wait_for_service('/gazebo/reset_simulation')
         try:
@@ -473,8 +501,10 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
             self.pause()
         except( rospy.ServiceException) as e:
             print(("/gazebo/pause_physics service call failed!"))
+               
         
-        print("Reward global:", self.reward_global)
+        if np.random.uniform() < 0.1: 
+            print("Reward global:", self.reward_global)
 
         return self.observationRescale(observations)
 
@@ -853,3 +883,5 @@ class GazeboOceanEboatEnvCC2(gazebo_env.GazeboEnv):
             print(("/gazebo/pause_physics service call failed!"))
 
         return self.observationRescale(observations)
+
+
