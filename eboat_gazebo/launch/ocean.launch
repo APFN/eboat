@@ -8,7 +8,9 @@
     <arg name="namespace"         default="eboat"/>                                    <!-- Start in a default namespace -->
     <arg name="robot_locked"      default="false" />                                   <!-- Do we lock the vessel to the world? -->
     <arg name="paused"            default="false"/>                                    <!-- Start paused? -->
-    <arg name="joy"               default="false"/>                                    <!-- Joystick control? -->
+    <arg name="joy"               default="false"/> 
+    
+    <param name="window_geometry" value="800x600+0+0"/>                                   <!-- Joystick control? -->
 
     <!-- Start Gazebo with the world file -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">

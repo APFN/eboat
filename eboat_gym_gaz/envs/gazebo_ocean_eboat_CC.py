@@ -17,6 +17,8 @@ from tf.transformations import quaternion_from_euler
 from gazebo_msgs.srv import SetModelState
 from gazebo_msgs.msg import ModelState
 
+from filterpy.kalman import KalmanFilter
+
 def vet2str(vet):
     vetstr = "["
     for val in vet:
@@ -25,8 +27,16 @@ def vet2str(vet):
     vetstr.replace(",]", "]")
     return vetstr
 
+global actions_buffer_leme, actions_buffer_vela, buffer
+actions_buffer_leme = []
+actions_buffer_vela = []
+# Cria um buffer vazio para armazenar os valores antigos
+buffer = []
+
+
+
 class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
-    
+        
     def __init__(self):   
         print("#################### entrou no CC0 ###################")
 
@@ -98,25 +108,59 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         x = magnitude * math.cos(angle)
         y = magnitude * math.sin(angle)
         self.windSpeed[:2] = [x,y]
-        if np.random.uniform() < 0.3: # 30% das vezes é vento contra. "na cara"
+        if np.random.uniform() < 0.1: # 30% das vezes é vento contra. "na cara"
             self.windSpeed[:2] = [0,(magnitude*-1)]
         #print(self.windSpeed)
 
-    def rewardFunction(self, obs):
+    def rewardFunction(self, obs, ract):
         #--> Reward;Penalty by decresing/increasing the distance from the goal.
         reward = (self.DPREV - obs[0]) / self.D0
 
-        if obs[2] < 0.4:
+        if obs[2] < 1:
             #--> Have a velocity slower than 0.4 m/s or negative generate a penalty.
             reward -= 0.2
         elif (abs(obs[1]) < 60):
             #--> Have a velocity greater than 0.4 m/s toward the objective generates a reward.
             reward += 0.01 * (1.0 - abs(obs[1]) / 60.0)
 
-            if ((obs[2] > 1.0) & (obs[7] == 0)):
+            if ((obs[2] > 2) & (obs[7] == 0)):
                 #--> Reward for boat speedy greater than 1.0 m/s if the electric engine is offline.
-                reward += 0.1
+                reward += 1
 
+        # Define o limite máximo de oscilação aceitável
+        max_oscilacao = 10
+        # Define o tamanho do intervalo de tempo
+        time_window = 4
+        # Adiciona a ação atual ao buffer de ações
+        actions_buffer_leme.append(ract[0])
+        actions_buffer_vela.append(ract[1])
+        
+        # Remove a ação mais antiga do buffer se o seu tamanho exceder o intervalo de tempo
+        if len(actions_buffer_leme) > time_window:
+            actions_buffer_leme.pop(0)
+            actions_buffer_vela.pop(0)
+        
+        # Calcula o desvio padrão das ações no buffer
+        std_dev_leme = np.std(actions_buffer_leme)
+        std_dev_vela = np.std(actions_buffer_vela)
+
+        #print("#####oscilou muito o leme", std_dev_leme, actions_buffer_leme)
+        #print("#####oscilou muito a vela", std_dev_vela, actions_buffer_vela)
+        #print(std_dev_vela, std_dev_leme)
+        
+        # Se o desvio padrão exceder o limite máximo, penalize o modelo
+        if std_dev_leme > max_oscilacao:
+            reward += -0.0001
+            #print("#####oscilou muito o leme", std_dev_leme, actions_buffer_leme)
+        else:
+            reward += 1.0
+        
+        if std_dev_vela > max_oscilacao:
+            reward = -0.0001
+            #print("#####oscilou muito a vela", std_dev_vela, actions_buffer_vela)
+        else:
+            reward = 1.0
+        
         return reward
 
     def setInitialState(self, model_name, theta):
@@ -170,7 +214,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         return np.array(obsData, dtype=float)
 
     def actionRescale(self, action):
-        raction = np.zeros(3, dtype = np.float32)
+        raction = np.zeros(2, dtype = np.float32)
         # #--> Eletric propulsion [-5, 5]
         # raction[0] = action[0] * 5.0
         #--> Boom angle [0, 90]
@@ -216,6 +260,22 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
     
+    def simple_moving_average_filter(self, x, window_size):
+        
+        # Adiciona o valor atual no final do buffer
+        buffer.append(x)
+        
+        # Remove o valor mais antigo do início do buffer
+        if len(buffer) > window_size:
+            buffer.pop(0)
+        
+        # Calcula a média móvel do buffer
+        filtered_x = sum(buffer) / len(buffer)
+        
+        return filtered_x
+
+
+
     def step(self, action):
         #print("#################### step no CC0 ###################")
         #--> UNPAUSE SIMULATION
@@ -227,10 +287,13 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
 
         #-->SEND ACTION TO THE BOAT CONTROL INTERFACE
         ract = self.actionRescale(action)
-        # print(f"---> action = {action}")
-        # print(f"---> ract   = {ract}")
-        #desliga e liga motor
-        #self.propVel_pub.publish(int(0)) # quando o espaço de observações for 2
+        # print("sem filtro",ract[0],ract[1])
+        # # print(f"---> action = {action}")
+        # # print(f"---> ract   = {ract}")
+        # ract[0]=self.simple_moving_average_filter(ract[0],3)
+        # ract[1]=self.simple_moving_average_filter(ract[1],3)
+        # print("com filtro",ract[0],ract[1])        
+
         self.boomAng_pub.publish(ract[0])
         self.rudderAng_pub.publish(ract[1])
 
@@ -283,7 +346,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         #-->COMPUTES THE REWARD
         if not done:
             #print("COMPUTES THE REWARD: not done")
-            reward  = self.rewardFunction(observations)
+            reward  = self.rewardFunction(observations, ract)
             #print(reward)
             self.DPREV = dist                               #-->UPDATE CURRENT DISTANCE
         elif (dist > self.DMAX):

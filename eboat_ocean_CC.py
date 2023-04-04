@@ -104,8 +104,8 @@ def runA2C(policy, env,learning_rate=0.0007, n_steps=5, gamma=0.99, gae_lambda=1
 
     return model, models_dir, tb_log_name
 
-def runPPO(policy, env, learning_rate=0.0003, n_steps=2048, batch_size=64, n_epochs=10, gamma=0.99, gae_lambda=0.95,
-           clip_range=0.2, clip_range_vf=None, normalize_advantage=True, ent_coef=0.0, vf_coef=0.5, max_grad_norm=0.5,
+def runPPO(policy, env, learning_rate=0.0003, n_steps=2048, batch_size=512, n_epochs=10, gamma=0.99, gae_lambda=0.95,
+           clip_range=0.2, clip_range_vf=None, normalize_advantage=True, ent_coef=0.0000000001, vf_coef=0.5, max_grad_norm=0.5,
            use_sde=False, sde_sample_freq=-1, target_kl=None, tensorboard_log=None, policy_kwargs=None, verbose=0,
            seed=None, device='auto', init_setup_model=True, sufix = ""):
 
@@ -176,7 +176,7 @@ def runTrainingv0(env, logdir, sufix="model1"):
     model, models_dir, TB_LOG_NAME = runPPO(policy          = "MlpPolicy",
                                             env             = env,
                                             tensorboard_log = logdir,
-                                            ent_coef        = 0.001,
+                                            ent_coef        = 0.00001,
                                             verbose         = 0,
                                             policy_kwargs   = policy_kwargs,
                                             sufix           = sufix)

@@ -3,7 +3,15 @@
 <!-- Macro to insert the ocean in the world -->
 <world xmlns:xacro="http://ros.org/wiki/xacro">
 	<xacro:macro name="ocean">
-		<scene>
+        <gui fullscreen='0'>
+            <camera name='user_camera'>
+                <pose>5 50 140 0 1.55 0</pose> <!--Treinamento-->
+                <pose>5 50 140 0 1.55 0</pose> <!-- Main -->
+                <view_controller>orbit</view_controller>
+            </camera>
+        </gui>
+        
+        <scene>
 			<sky>
 				<clouds>
 					<speed>12</speed>
@@ -30,7 +38,7 @@
                 </solver>
             </ode>
             <max_step_size>0.01</max_step_size>
-            <real_time_update_rate>1000</real_time_update_rate>
+            <real_time_update_rate>500</real_time_update_rate>
         </physics>
         <gravity>0.0 0.0 -9.81</gravity>
         
@@ -69,11 +77,11 @@
         </include>-->
 
         <!--Marker to indicate the effort center for the wind forces-->
-        <!-- <include>
+        <include>
             <name>wayPointMarker</name>
-            <pose>0 20.0 0 0 0 0</pose>
+            <pose>0 100.0 0 0 0 0</pose>
             <uri>/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wayPointMarker</uri>
-        </include> -->
+        </include>
 
         <!-- Plugin to control atmosferic physics-->
         <plugin name="atmosferic_control" filename="libAtmosfericControlPlugin.so"/>
