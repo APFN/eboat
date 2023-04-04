@@ -40,7 +40,7 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_02042023_ok_tremendo/eboat_ocean_100.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_04042023_13_16_42/eboat_ocean_100.zip")
     
     #-->DEFINE NAVIGATION PATH
     # navpath = [[0.0     , 100.0, 0.5],
@@ -68,9 +68,18 @@ def main():
     #            [-75, -75, 0.5],
     #            [-75, 75, 0.5]]
 
+    # navpath = [[0.0, 100.0, 0.5],
+    #         [-100, 0, 0.5],
+    #         [100, 0, 0.5],
+    #         [-100, 0, 0.5],
+    #         [0, 100, 0.5],
+    #         [100, 0, 0.5],
+    #         [0, -100, 0.5],
+    #         [-100, 0, 0.5]]
+
     # #->DEFINE NAVIGATION PATH
-    navpath = [[-100, 100, 0.5],
-               [100, 100, 0.5]]
+    navpath = [[-100, 200, 0.5],
+               [100, 200, 0.5]]
 
     # navpath = [[0.0, 100.0, 0.5]]
 
