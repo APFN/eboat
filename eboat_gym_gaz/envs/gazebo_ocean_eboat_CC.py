@@ -125,7 +125,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
 
             if ((obs[2] > 2) & (obs[7] == 0)):
                 #--> Reward for boat speedy greater than 1.0 m/s if the electric engine is offline.
-                reward += 1
+                reward += 2
 
         # Define o limite máximo de oscilação aceitável
         max_oscilacao = 10
@@ -143,7 +143,6 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         # Calcula o desvio padrão das ações no buffer
         std_dev_leme = np.std(actions_buffer_leme)
         std_dev_vela = np.std(actions_buffer_vela)
-
         #print("#####oscilou muito o leme", std_dev_leme, actions_buffer_leme)
         #print("#####oscilou muito a vela", std_dev_vela, actions_buffer_vela)
         #print(std_dev_vela, std_dev_leme)
