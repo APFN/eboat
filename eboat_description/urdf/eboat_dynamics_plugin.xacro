@@ -18,9 +18,9 @@
         <!-- Linear and quadratic drag -->
         <xU>5</xU>
         <xUU>7.4</xUU>
-        <yV>8.0</yV>
+        <yV>80.0</yV>
         <yVV>160.0</yVV>
-        <zW>50.0</zW>
+        <zW>500.0</zW>
         <zWW>0.0</zWW>
         <kP>5.0</kP>
         <mQ>5.0</mQ>

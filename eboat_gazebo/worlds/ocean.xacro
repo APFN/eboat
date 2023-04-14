@@ -6,11 +6,13 @@
         <gui fullscreen='0'>
             <camera name='user_camera'>
                 <!--<pose>5 50 140 0 1.55 0</pose>--> <!--Treinamento-->
-                <pose>0 0 300 0 1.55 0</pose> <!-- Main -->
+                <!-- <pose>0 0 300 0 1.55 0</pose> Main -->
+                <pose>-34.69 3.24 55.65 0 0.89 -0.13</pose> <!-- Main -->
                 <view_controller>orbit</view_controller>
             </camera>
         </gui>
-        
+
+
         <scene>
 			<sky>
 				<clouds>
@@ -83,8 +85,28 @@
             <uri>/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wayPointMarker</uri>
         </include> -->
 
-        <!-- Plugin to control atmosferic physics-->
-        <plugin name="atmosferic_control" filename="libAtmosfericControlPlugin.so"/>
+        <!-- Marker to indicate the effort center for the wind forces
+        <include>
+            <name>wind_arrow</name>
+            <pose>0 0 0 0 0 0</pose>
+            <uri>/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wind_arrow</uri>
+        </include> -->
+
+        <!-- Usar em modo de treinamento ??? Plugin to control atmosferic physics-->
+        <!-- <plugin name="atmosferic_control" filename="libAtmosfericControlPlugin.so"/> -->
+
+         <!-- Usar em modo de main-->
+        <!-- <wind>
+            <linear_velocity>-10.0 0.0 0.0</linear_velocity>
+            <angular_velocity>0.0 0.0 0.0</angular_velocity>
+        </wind> -->
+
+        <plugin name="my_wind_plugin" filename="my_wind_plugin.so">
+            <ros>
+                <node name="my_plumy_wind_plugingin" pkg="my_wind_plugin" type="my_wind_plugin_node"/>
+            </ros>
+        </plugin>
+        
 	
 	</xacro:macro>
 

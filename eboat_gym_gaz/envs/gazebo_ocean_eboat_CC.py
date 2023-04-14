@@ -63,7 +63,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         #--> We will use a rescaled action space
         self.action_space = spaces.Box(low   = -1 ,
                                        high  = 1  ,
-                                       shape = (2,),
+                                       shape = (3,),
                                        dtype = np.float32)
 
         # --> We will use a rescaled action space
@@ -108,13 +108,15 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         x = magnitude * math.cos(angle)
         y = magnitude * math.sin(angle)
         self.windSpeed[:2] = [x,y]
+        
         if np.random.uniform() < 0.1: # 30% das vezes é vento contra. "na cara"
             self.windSpeed[:2] = [0,(magnitude*-1)]
         #print(self.windSpeed)
 
     def rewardFunction(self, obs, ract):
         #--> Reward;Penalty by decresing/increasing the distance from the goal.
-        reward = (self.DPREV - obs[0]) / self.D0
+        progre = (self.DPREV - obs[0]) / self.DMAX
+        reward = progre
 
         if obs[2] < 1:
             #--> Have a velocity slower than 0.4 m/s or negative generate a penalty.
@@ -160,6 +162,21 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         else:
             reward = 1.0
         
+        if obs[7] != 0:
+                 reward -= reward + abs(progre)
+
+        #================================Edu==========================
+        # progre = (self.DPREV - obs[0]) / self.DMAX
+        # reward = progre
+        # if obs[2] < 2:
+        #     reward = np.min([-2.0*reward, -0.3])
+        # else:
+        #     if obs[1] < 60:
+        #         reward *= 2.0
+
+        #     if obs[7] != 0:
+        #         reward -= reward + abs(progre)
+
         return reward
 
     def setInitialState(self, model_name, theta):
@@ -213,13 +230,13 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         return np.array(obsData, dtype=float)
 
     def actionRescale(self, action):
-        raction = np.zeros(2, dtype = np.float32)
+        raction = np.zeros(3, dtype = np.float32)
         # #--> Eletric propulsion [-5, 5]
-        # raction[0] = action[0] * 5.0
+        raction[0] = action[0] * 5.0
         #--> Boom angle [0, 90]
-        raction[0] = (action[0] + 1) * 45.0
+        raction[1] = (action[1] + 1) * 45.0
         #--> Rudder angle [-60, 60]
-        raction[1] = action[1] * 60.0
+        raction[2] = action[2] * 60.0
         return raction
 
     def rescale(self, m, rmin, rmax, tmin, tmax):
@@ -293,8 +310,9 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         # ract[1]=self.simple_moving_average_filter(ract[1],3)
         # print("com filtro",ract[0],ract[1])        
 
-        self.boomAng_pub.publish(ract[0])
-        self.rudderAng_pub.publish(ract[1])
+        self.propVel_pub.publish(int(ract[0]))
+        self.boomAng_pub.publish(ract[1])
+        self.rudderAng_pub.publish(ract[2])
 
         
         #-->GET OBSERVATIONS (NEXT STATE)
@@ -353,7 +371,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
             reward = -1
         else:
             print("COMPUTES THE REWARD: DONE")
-            reward  = 100
+            reward  = 10
             self.reset()
         
         self.reward_global = self.reward_global + reward
@@ -447,7 +465,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         # --> We will use a rescaled action space
         self.action_space = spaces.Box(low=-1,
                                        high=1,
-                                       shape=(2,),
+                                       shape=(3,),
                                        dtype=np.float32)
 
         # --> We will use a rescaled action space

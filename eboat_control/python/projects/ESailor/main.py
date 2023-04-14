@@ -13,7 +13,9 @@ from geometry_msgs.msg import Pose
 
 from plot_coordinates import PlotCoordinates
 
-import threading
+
+import math
+
 
 from stable_baselines3 import PPO
 
@@ -40,24 +42,8 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_05042023_18_32_19/eboat_ocean_100.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_02042023_ok_tremendo/eboat_ocean_100.zip")
     
-    #-->DEFINE NAVIGATION PATH
-    # navpath = [[0.0     , 100.0, 0.5],
-    #            [83.5165 , 155.0, 0.5],
-    #            [181.4961, 175.0, 0.5],
-    #            [281.4961, 175.0, 0.5],
-    #            [354.8173, 243.0, 0.5]]
-    
-    #  #-->DEFINE NAVIGATION PATH
-    # navpath = [[0, 0, 0.5],
-    #            [0, 100, 0.5],
-    #            [0, 0, 0.5],
-    #            [50, 50, 0.5],
-    #            [0, 100, 0.5],
-    #            [0, 0, 0.5]]
-
-
     # #-->DEFINE NAVIGATION PATH
     # navpath = [[-100, 0, 0.5],
     #            [0, 100, 0.5],
@@ -76,12 +62,16 @@ def main():
             [100, 0, 0.5],
             [0, -100, 0.5],
             [-100, 0, 0.5]]
+            
 
-    # # #->DEFINE NAVIGATION PATH
+    # # # #->DEFINE NAVIGATION PATH
     # navpath = [[-100, 200, 0.5],
     #            [100, 200, 0.5]]
 
     # navpath = [[0.0, 100.0, 0.5]]
+
+    windSpeed = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+    wind_pub.publish(Point(windSpeed[0], windSpeed[1],windSpeed[2]))
 
     #-->RESET SIMULATION
     rospy.wait_for_service('/gazebo/reset_simulation')
@@ -98,11 +88,8 @@ def main():
 
     for waypoint in navpath:
         #########################################################################
-        try:
-            result = delete_model("wayPointMarker")
-        except rospy.ServiceException:
-            print("/gazebo/get_model_state service call failed")
-        time.sleep(1)
+        delete_model("wayPointMarker")
+        time.sleep(0.1)
         ipose = Pose()
         ipose.position.x = waypoint[0]
         ipose.position.y = waypoint[1]
@@ -117,9 +104,10 @@ def main():
                                      ipose, "world")
             except rospy.ServiceException:
                 print("/gazebo/SpawnModel service call failed")
-            time.sleep(1)
+            time.sleep(0.1)
 
         #########################################################################
+
 
         # -->UNPAUSE SIMULATION
         rospy.wait_for_service('/gazebo/unpause_physics')
@@ -131,6 +119,34 @@ def main():
         #-->COLLECT OBSERVATIONS
         observations = getObservations()[:5]
 
+        #########################################################################
+       
+        delete_model("wind_arrow")
+        time.sleep(0.1)
+        wpose = Pose()
+
+        quaternion = quaternion_from_euler(0, 0, math.radians(observations[4]))
+        wpose.position.x = 0
+        wpose.position.y = 0
+        wpose.position.z = 20
+        wpose.orientation.x = quaternion[0]
+        wpose.orientation.y = quaternion[1]
+        wpose.orientation.z = quaternion[2]
+        wpose.orientation.w = quaternion[3]
+        
+        with open("/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wind_arrow/model.sdf") as f:
+            sdffile2 = f.read()
+            try:
+                result = spawn_model("wind_arrow",
+                                     sdffile2,
+                                     "wind_arrow",
+                                     wpose, "world")
+            except rospy.ServiceException:
+                print("/gazebo/SpawnModel service call failed")
+            time.sleep(0.1)
+
+        #########################################################################
+
         print("--------------------------------------------------")
         while observations[0] > 10: #waipoint alcançado há 10m de distancia do barco
             pc.save_eboat_coordinates() # Chama o método save_coordinates da instância pc
@@ -139,7 +155,7 @@ def main():
 
             #-->PREDICT ACTIONS
             actions = actionRescale(model.predict(obs)[0])
-            actions[0] = np.floor(actions[0])
+            #actions[0] = np.floor(actions[0])
             # imprimi opbservações e achoes do modelo
             print(f"{vet2str(observations)} --> {vet2str(actions)}")
 
@@ -168,6 +184,14 @@ def main():
     rudderAng_pub.publish(0.0)
     pc.plot_coordinates() # Chama o método save_coordinates da instância pc
 
+
+def spawn_waypoint(waypoint):
+    vetstr = "["
+    for val in vet:
+        vetstr += "{:5.3f}, ".format(val)
+    vetstr += "]"
+    vetstr.replace(",]", "]")
+    
 
 def setWayPoint(model_name="wayPointMarker", Pos = None):
     state = ModelState()
