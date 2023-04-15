@@ -16,8 +16,10 @@ from plot_coordinates import PlotCoordinates
 
 import math
 
+from std_msgs.msg import Float64
 
 from stable_baselines3 import PPO
+
 
 
 def main():
@@ -70,8 +72,32 @@ def main():
 
     # navpath = [[0.0, 100.0, 0.5]]
 
-    windSpeed = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-    wind_pub.publish(Point(windSpeed[0], windSpeed[1],windSpeed[2]))
+    windSpeed = np.array([5, 0, 0.0], dtype=np.float32)
+    wind_pub.publish(Point(windSpeed[0], windSpeed[1], windSpeed[2]))
+
+    #########################################################################
+    time.sleep(0.1)
+    wpose = Pose()
+    wpose.position.x = 0
+    wpose.position.y = 0
+    wpose.position.z = 20
+    # wpose.orientation.x = quaternion[0]
+    # wpose.orientation.y = quaternion[1]
+    # wpose.orientation.z = quaternion[2]
+    # wpose.orientation.w = quaternion[3]
+    
+    with open("/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wind_arrow/model.sdf") as f:
+        sdffile2 = f.read()
+        try:
+            result = spawn_model("wind_arrow",
+                                    sdffile2,
+                                    "wind_arrow",
+                                    wpose, "world")
+        except rospy.ServiceException:
+            print("/gazebo/SpawnModel service call failed")
+        time.sleep(0.1)
+
+        #########################################################################
 
     #-->RESET SIMULATION
     rospy.wait_for_service('/gazebo/reset_simulation')
@@ -87,6 +113,12 @@ def main():
 
 
     for waypoint in navpath:
+
+        
+        # windSpeed = [0.0, 0.0, 0.0]
+        # wind_pub.publish(Float64(windSpeed))
+        
+
         #########################################################################
         delete_model("wayPointMarker")
         time.sleep(0.1)
@@ -118,34 +150,6 @@ def main():
 
         #-->COLLECT OBSERVATIONS
         observations = getObservations()[:5]
-
-        #########################################################################
-       
-        delete_model("wind_arrow")
-        time.sleep(0.1)
-        wpose = Pose()
-
-        quaternion = quaternion_from_euler(0, 0, math.radians(observations[4]))
-        wpose.position.x = 0
-        wpose.position.y = 0
-        wpose.position.z = 20
-        wpose.orientation.x = quaternion[0]
-        wpose.orientation.y = quaternion[1]
-        wpose.orientation.z = quaternion[2]
-        wpose.orientation.w = quaternion[3]
-        
-        with open("/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wind_arrow/model.sdf") as f:
-            sdffile2 = f.read()
-            try:
-                result = spawn_model("wind_arrow",
-                                     sdffile2,
-                                     "wind_arrow",
-                                     wpose, "world")
-            except rospy.ServiceException:
-                print("/gazebo/SpawnModel service call failed")
-            time.sleep(0.1)
-
-        #########################################################################
 
         print("--------------------------------------------------")
         while observations[0] > 10: #waipoint alcançado há 10m de distancia do barco

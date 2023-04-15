@@ -12,6 +12,7 @@
 
 #include <ros/ros.h>
 #include "std_msgs/Float32.h"
+#include <std_msgs/String.h>
 
 namespace gazebo
 {
@@ -101,6 +102,8 @@ namespace gazebo
         private: ros::Publisher windAnglePub;
 
         private: ros::Publisher obsPub;
+        
+        private: ros::Publisher windPub;
     };
 }
 #endif

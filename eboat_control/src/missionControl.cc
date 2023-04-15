@@ -48,6 +48,7 @@ MissionControlPlugin::MissionControlPlugin(): freq(1.0)
     this->windSpeedPub = rosNode.advertise<std_msgs::Float32>("/eboat/mission_control/wind_speed", 500);
     this->windAnglePub = rosNode.advertise<std_msgs::Float32>("/eboat/mission_control/wind_angle", 500);*/
     this->obsPub = rosNode.advertise<std_msgs::Float32MultiArray>("/eboat/mission_control/observations", 1000);
+    this->windPub = rosNode.advertise<std_msgs::Float32MultiArray>("/eboat/atmosferic_control/wind", 1000);
 }
 
 void MissionControlPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
@@ -138,11 +139,16 @@ void MissionControlPlugin::OnUpdate()
         this->timeOfLastObs = simtime;
 
         std_msgs::Float32MultiArray obsMsg;
-        
+        std_msgs::Float32MultiArray windMsg;
         ignition::math::Vector3d apWind        = this->sailJoint->GetChild()->WorldWindLinearVel() - this->sailJoint->GetChild()->WorldLinearVel();
         ignition::math::Vector3d aheadD        = this->link->WorldPose().Rot().RotateVector(this->ahead); //--> Dynamic ahead direction, it changes as the boats move around.
         ignition::math::Vector3d portD         = this->link->WorldPose().Rot().RotateVector(this->port);  //--> Dynamic port direction, it changes as the boats move around.
         ignition::math::Vector3d trajectoryVec;
+
+        ignition::math::Vector3d wind_vel = this->sailJoint->GetChild()->WorldWindLinearVel();
+        windMsg.data.push_back(wind_vel.X());
+        windMsg.data.push_back(wind_vel.Y());
+        this->windPub.publish(windMsg);
 
         // COMPUTE THE DISTANCE TO THE WAY POINT AND TAJECTORY TO THE WAYPOINT
         float distance;

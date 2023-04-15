@@ -1,7 +1,7 @@
 <?xml version='1.0'?>
 <sdf version='1.7'>
   <model name='wind_arrow'>
-    <link name='link_0'>
+    <link name='link_1'>
       <inertial>
         <mass>0</mass>
         <inertia>
@@ -12,29 +12,13 @@
           <iyz>0</iyz>
           <izz>0</izz>
         </inertia>
-      </inertial>
-      <pose>0 0 0 1.5708 0 0</pose>
+      </inertial>      
       <visual name='visual'>
-        <pose>0 0 0 0 0 0</pose>
-      <geometry>
-        <cylinder>
-          <radius>0.20</radius>
-          <length>2</length>
-        </cylinder>
-        <sphere>
-          <radius>0.7</radius>
-        </sphere>
-      </geometry>
-        <material>
-          <lighting>1</lighting>
-          <script>
-            <uri>file://media/materials/scripts/gazebo.material</uri>
-            <name>Gazebo/Red</name>
-          </script>
-          <shader type='pixel'/>
-        </material>
-        <transparency>0</transparency>
-        <cast_shadows>1</cast_shadows>
+        <pose>0 0 0 1.5707963 0 3.1415927</pose>
+        <geometry>
+          <mesh><uri>/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wind_arrow/meshes/arrow.stl</uri> <scale>10 10 10</scale></mesh>
+        </geometry>
+        <material><ambient>1 0 0 1</ambient><diffuse>1 0 0 1</diffuse><specular>0.1 0.1 0.1 1</specular><emissive>0 0 0 0</emissive></material>
       </visual>
     </link>
     <static>1</static>

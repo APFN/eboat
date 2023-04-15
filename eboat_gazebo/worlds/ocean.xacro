@@ -93,19 +93,15 @@
         </include> -->
 
         <!-- Usar em modo de treinamento ??? Plugin to control atmosferic physics-->
-        <!-- <plugin name="atmosferic_control" filename="libAtmosfericControlPlugin.so"/> -->
+        <plugin name="atmosferic_control" filename="libAtmosfericControlPlugin.so"/>
 
          <!-- Usar em modo de main-->
-        <!-- <wind>
+        <wind>
             <linear_velocity>-10.0 0.0 0.0</linear_velocity>
             <angular_velocity>0.0 0.0 0.0</angular_velocity>
-        </wind> -->
+        </wind>
 
-        <plugin name="my_wind_plugin" filename="my_wind_plugin.so">
-            <ros>
-                <node name="my_plumy_wind_plugingin" pkg="my_wind_plugin" type="my_wind_plugin_node"/>
-            </ros>
-        </plugin>
+    
         
 	
 	</xacro:macro>
