@@ -14,7 +14,7 @@
         </inertia>
       </inertial>      
       <visual name='visual'>
-        <pose>0 0 0 1.5707963 0 3.1415927</pose>
+        <pose>1.3 -1.3 0 1.5707963 0 3.1415927</pose>
         <geometry>
           <mesh><uri>/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wind_arrow/meshes/arrow.stl</uri> <scale>10 10 10</scale></mesh>
         </geometry>

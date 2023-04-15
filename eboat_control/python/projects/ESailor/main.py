@@ -12,6 +12,8 @@ from gazebo_msgs.msg import ModelState
 from geometry_msgs.msg import Pose
 
 from plot_coordinates import PlotCoordinates
+from geometry_msgs.msg import Vector3
+from transforms3d.quaternions import axangle2quat
 
 
 import math
@@ -21,6 +23,53 @@ from std_msgs.msg import Float64
 from stable_baselines3 import PPO
 
 
+set_state     = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
+
+def wind_callback(data):
+    wind_x, wind_y = map(float, data.data)    
+    model_state = ModelState()
+    model_state.model_name = "wind_arrow" 
+    model_state.pose.position.x = 0
+    model_state.pose.position.y = 0
+    model_state.pose.position.z = 20
+
+    theta = np.arctan2(wind_x, wind_y)
+    axis = np.array([1, 0, 0])
+    # criação do quaternion
+    wind_quaternion = axangle2quat(axis, theta)
+    # wind_quaternion = vector_to_quaternion(wind_x, wind_y)
+    model_state.pose.orientation.x = wind_quaternion[0]
+    model_state.pose.orientation.y = wind_quaternion[1]
+    model_state.pose.orientation.z = wind_quaternion[2]
+    model_state.pose.orientation.w = wind_quaternion[3]
+
+    #atulaiza o estado do vetor do vento
+    set_state(model_state)
+
+
+def vector_to_quaternion(x, y):
+    # Normalizing the vector
+    norm = np.sqrt(x**2 + y**2)
+    x = x/norm
+    y = y/norm
+
+    # Computing the z component of the vector
+    z = np.sqrt(1 - x**2 - y**2)
+
+    # Computing the angle of the rotation
+    angle = np.arccos(z)
+
+    # Computing the axis of the rotation
+    axis = np.cross([0, 0, 1], [x, y, z])
+    axis = axis / np.linalg.norm(axis)
+
+    # Computing the quaternion
+    qw = np.cos(angle/2)
+    qx = axis[0] * np.sin(angle/2)
+    qy = axis[1] * np.sin(angle/2)
+    qz = axis[2] * np.sin(angle/2)
+
+    return qw, qx, qy, qz
 
 def main():
 
@@ -31,15 +80,17 @@ def main():
     boomAng_pub   = rospy.Publisher("/eboat/control_interface/sail"       , Float32, queue_size=5)
     rudderAng_pub = rospy.Publisher("/eboat/control_interface/rudder"     , Float32, queue_size=5)
     propVel_pub   = rospy.Publisher("/eboat/control_interface/propulsion", Int16  , queue_size=5)
-    wind_pub      = rospy.Publisher("/eboat/atmosferic_control/wind"      , Point  , queue_size=5)
+    wind_pub      = rospy.Publisher("/eboat/atmosferic_control/wind"      , Float32MultiArray  , queue_size=5)
     
     #-->ROS SERVICES
     unpause       = rospy.ServiceProxy('/gazebo/unpause_physics' , Empty)
     pause         = rospy.ServiceProxy('/gazebo/pause_physics'   , Empty)
     reset_proxy   = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
-    set_state     = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
+    
     spawn_model   = rospy.ServiceProxy('/gazebo/spawn_sdf_model', SpawnModel)
     delete_model  = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
+
+    rospy.Subscriber('/eboat/atmosferic_control/wind', Float32MultiArray, wind_callback)  
 
 
 
@@ -72,8 +123,6 @@ def main():
 
     # navpath = [[0.0, 100.0, 0.5]]
 
-    windSpeed = np.array([5, 0, 0.0], dtype=np.float32)
-    wind_pub.publish(Point(windSpeed[0], windSpeed[1], windSpeed[2]))
 
     #########################################################################
     time.sleep(0.1)
@@ -81,10 +130,6 @@ def main():
     wpose.position.x = 0
     wpose.position.y = 0
     wpose.position.z = 20
-    # wpose.orientation.x = quaternion[0]
-    # wpose.orientation.y = quaternion[1]
-    # wpose.orientation.z = quaternion[2]
-    # wpose.orientation.w = quaternion[3]
     
     with open("/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wind_arrow/model.sdf") as f:
         sdffile2 = f.read()
