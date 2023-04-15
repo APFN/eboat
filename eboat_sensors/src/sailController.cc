@@ -108,6 +108,7 @@ void SailControllerPlugin::OnUpdate()
     // wind can push the sail, or he can pull the cable to move the sail against
     // the wind force.
     //this->boomEngVel = 0.5 / 1000.0; //-->the time step in current simulation is 1 millisecond
+    
     if (this->sailPosition > this->sailJoint->UpperLimit(0) + this->d2r) //--> in this condition the cable should be released
     {
         // emulates cable release velocity
