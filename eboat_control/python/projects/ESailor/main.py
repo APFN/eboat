@@ -15,11 +15,6 @@ from plot_coordinates import PlotCoordinates
 from geometry_msgs.msg import Vector3
 from transforms3d.quaternions import axangle2quat
 
-
-import math
-
-from std_msgs.msg import Float64
-
 from stable_baselines3 import PPO
 
 
@@ -37,7 +32,6 @@ def wind_callback(data):
     axis = np.array([1, 0, 0])
     # criação do quaternion
     wind_quaternion = axangle2quat(axis, theta)
-    # wind_quaternion = vector_to_quaternion(wind_x, wind_y)
     model_state.pose.orientation.x = wind_quaternion[0]
     model_state.pose.orientation.y = wind_quaternion[1]
     model_state.pose.orientation.z = wind_quaternion[2]
@@ -45,31 +39,6 @@ def wind_callback(data):
 
     #atulaiza o estado do vetor do vento
     set_state(model_state)
-
-
-def vector_to_quaternion(x, y):
-    # Normalizing the vector
-    norm = np.sqrt(x**2 + y**2)
-    x = x/norm
-    y = y/norm
-
-    # Computing the z component of the vector
-    z = np.sqrt(1 - x**2 - y**2)
-
-    # Computing the angle of the rotation
-    angle = np.arccos(z)
-
-    # Computing the axis of the rotation
-    axis = np.cross([0, 0, 1], [x, y, z])
-    axis = axis / np.linalg.norm(axis)
-
-    # Computing the quaternion
-    qw = np.cos(angle/2)
-    qx = axis[0] * np.sin(angle/2)
-    qy = axis[1] * np.sin(angle/2)
-    qz = axis[2] * np.sin(angle/2)
-
-    return qw, qx, qy, qz
 
 def main():
 
@@ -97,31 +66,25 @@ def main():
     #-->LOAD AGENT USING STABLE-BASELINES3
     model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_02042023_ok_tremendo/eboat_ocean_100.zip")
     
-    # #-->DEFINE NAVIGATION PATH
-    # navpath = [[-100, 0, 0.5],
-    #            [0, 100, 0.5],
-    #            [100, 0, 0.5],
-    #            [0, -100, 0.5],
-    #            [75, 75, 0.5],
-    #            [75, -75, 0.5],
-    #            [-75, -75, 0.5],
-    #            [-75, 75, 0.5]]
 
-    navpath = [[0.0, 100.0, 0.5],
-            [-100, 0, 0.5],
-            [100, 0, 0.5],
-            [-100, 0, 0.5],
-            [0, 100, 0.5],
-            [100, 0, 0.5],
-            [0, -100, 0.5],
-            [-100, 0, 0.5]]
-            
+    # navpath = [[0.0, 100.0, 0.5],
+    #         [-100, 0, 0.5],
+    #         [100, 0, 0.5],
+    #         [-100, 0, 0.5],
+    #         [0, 100, 0.5],
+    #         [100, 0, 0.5],
+    #         [0, -100, 0.5],
+    #         [-100, 0, 0.5]]            
 
-    # # # #->DEFINE NAVIGATION PATH
-    # navpath = [[-100, 200, 0.5],
-    #            [100, 200, 0.5]]
+    # # # # #->DEFINE NAVIGATION PATH
+    navpath = [[-50, 50, 0.5],
+               [50, 50, 0.5],
+               [50, -50, 0.5],
+               [-50, -50, 0.5],
+               [-50, 50, 0.5],
+               [0, 100, 0.5],]
 
-    # navpath = [[0.0, 100.0, 0.5]]
+    # navpath = [[0.0, 50.0, 0.5]]
 
 
     #########################################################################
@@ -142,7 +105,7 @@ def main():
             print("/gazebo/SpawnModel service call failed")
         time.sleep(0.1)
 
-        #########################################################################
+    #########################################################################
 
     #-->RESET SIMULATION
     rospy.wait_for_service('/gazebo/reset_simulation')
@@ -154,19 +117,13 @@ def main():
     boomAng_pub.publish(0.0)
     rudderAng_pub.publish(0.0)
 
-    pc = PlotCoordinates() # Cria uma instância da classe PlotCoordinates
+    pc = PlotCoordinates() # Cria uma instância da classe PlotCoordinates para plotar ao final
 
 
     for waypoint in navpath:
 
-        
-        # windSpeed = [0.0, 0.0, 0.0]
-        # wind_pub.publish(Float64(windSpeed))
-        
-
-        #########################################################################
         delete_model("wayPointMarker")
-        time.sleep(0.1)
+        time.sleep(0.5)
         ipose = Pose()
         ipose.position.x = waypoint[0]
         ipose.position.y = waypoint[1]
@@ -181,7 +138,7 @@ def main():
                                      ipose, "world")
             except rospy.ServiceException:
                 print("/gazebo/SpawnModel service call failed")
-            time.sleep(0.1)
+            time.sleep(0.5)
 
         #########################################################################
 
