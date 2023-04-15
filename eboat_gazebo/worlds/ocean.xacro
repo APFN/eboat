@@ -6,8 +6,7 @@
         <gui fullscreen='0'>
             <camera name='user_camera'>
                 <!--<pose>5 50 140 0 1.55 0</pose>--> <!--Treinamento-->
-                <!-- <pose>0 0 300 0 1.55 0</pose> Main -->
-                <pose>-34.69 3.24 55.65 0 0.89 -0.13</pose> <!-- Main -->
+                <pose>0 0 300 0 1.55 0</pose> Main
                 <view_controller>orbit</view_controller>
             </camera>
         </gui>
@@ -97,7 +96,7 @@
 
          <!-- Usar em modo de main-->
         <wind>
-            <linear_velocity>-2.0 0.0 0.0</linear_velocity>
+            <linear_velocity>0.0 10.0 0.0</linear_velocity>
             <angular_velocity>0.0 0.0 0.0</angular_velocity>
         </wind>
 

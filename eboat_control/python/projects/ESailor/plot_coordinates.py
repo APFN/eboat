@@ -46,8 +46,8 @@ class PlotCoordinates:
     def plot_coordinates(self):
         # Configura o plot
         fig, ax = plt.subplots()        
-        ax.set_xlim(-400, 400)
-        ax.set_ylim(-400, 400)
+        ax.set_xlim(-100, 100)
+        ax.set_ylim(-100, 200)
         ax.set_aspect('equal', adjustable='box')
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
@@ -59,7 +59,10 @@ class PlotCoordinates:
             print(i+1, x, y, t)
             ax.plot(x, y, label=f'{i+1}°| t: {t}', linestyle='', marker='o')
 
-        ax.legend()
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        ax.quiver(0, 170, 0, -40, angles='xy', scale_units='xy', scale=1)
+        plt.annotate('Vento', xy=(0, 190), xytext=(-50, 180))
+
         plt.draw()
         plt.pause(0.1)
         input("Pressione Enter para continuar...")
