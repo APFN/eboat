@@ -116,8 +116,8 @@ void SailControllerPlugin::OnUpdate()
          this->sailPosition == -90.0;
 
     
-    std::cout << "sailPosition : " << this->sailPosition << std::endl; 
-    std::cout << "sailJoint : " << this->sailJoint << std::endl;     
+    // std::cout << "sailPosition : " << this->sailPosition << std::endl; 
+    // std::cout << "sailJoint : " << this->sailJoint << std::endl;     
 
     double desiredPosition = this->sailPosition;
     // this->sailJoint->SetPosition(0, desiredPosition);
