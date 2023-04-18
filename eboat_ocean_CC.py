@@ -19,6 +19,9 @@ import eboat_gym_gaz
 from gym import wrappers
 from stable_baselines3 import A2C, PPO, DQN, SAC
 
+from stable_baselines3.common.policies import ActorCriticPolicy
+
+
 #-->PYTORCH
 import torch as th
 
@@ -58,6 +61,7 @@ def signal_handler(sig, frame):
     
 #recebe o sinal ctrl c chama função para fechar tudo          
 signal.signal(signal.SIGINT, signal_handler)
+
 
 
 def truncate(value):
@@ -104,8 +108,8 @@ def runA2C(policy, env,learning_rate=0.0007, n_steps=5, gamma=0.99, gae_lambda=1
 
     return model, models_dir, tb_log_name
 
-def runPPO(policy, env, learning_rate=0.0003, n_steps=2048, batch_size=512, n_epochs=10, gamma=0.99, gae_lambda=0.95,
-           clip_range=0.2, clip_range_vf=None, normalize_advantage=True, ent_coef=0.0000000001, vf_coef=0.5, max_grad_norm=0.5,
+def runPPO(policy, env, learning_rate=0.0003, n_steps=2048, batch_size=64, n_epochs=10, gamma=0.99, gae_lambda=0.95,
+           clip_range=0.2, clip_range_vf=None, normalize_advantage=True, ent_coef=0.0, vf_coef=0.5, max_grad_norm=0.5,
            use_sde=False, sde_sample_freq=-1, target_kl=None, tensorboard_log=None, policy_kwargs=None, verbose=0,
            seed=None, device='auto', init_setup_model=True, sufix = ""):
 
@@ -170,21 +174,19 @@ def actionRescale(action):
 
 def runTrainingv0(env, logdir, sufix="model1"):
     policy_kwargs = dict(activation_fn=th.nn.ReLU,
-                         net_arch=[dict(pi=[32, 32], vf=[32, 32])]
+                         net_arch=[(dict(pi=[32, 32], vf=[32, 32]))]
                          )
     print("##### entrou no runtraining0 ######")
     model, models_dir, TB_LOG_NAME = runPPO(policy          = "MlpPolicy",
                                             env             = env,
                                             tensorboard_log = logdir,
-                                            ent_coef        = 0.00001,
+                                            ent_coef        = 0.00000000001,
                                             verbose         = 0,
                                             policy_kwargs   = policy_kwargs,
                                             sufix           = sufix)
     print("##### saiu do runPPo ######")
-    SAVESTEPS = 100+1
+    SAVESTEPS = 50+1
     TIMESTEPS = 2048*5
-    # SAVESTEPS = 10
-    # TIMESTEPS = 200
     start     = time.time()
     model.save(f"{models_dir}/eboat_ocean_0")
     for i in range(1, SAVESTEPS):
@@ -264,6 +266,8 @@ def main():
 
     env.close()
     os.system('/eboat_ws/kill_gaz.sh')
+    # os.system("killall -9 gazebo gzserver gzclient rosmaster rosout")
+    # os.system("shutdown now")
 
 def runModel():
     apwindstr = ["from stern (vento de popa)",

@@ -120,36 +120,52 @@ void SailControllerPlugin::OnUpdate()
     // std::cout << "sailJoint : " << this->sailJoint << std::endl;     
 
     double desiredPosition = this->sailPosition;
-    // this->sailJoint->SetPosition(0, desiredPosition);
-    this->sailJoint->SetUpperLimit(0,desiredPosition);
-    this->sailJoint->SetLowerLimit(0,desiredPosition);
+    // // this->sailJoint->SetPosition(0, desiredPosition);
+    // this->sailJoint->SetUpperLimit(0,desiredPosition);
+    // this->sailJoint->SetLowerLimit(0,desiredPosition);
 
-    // if (this->sailPosition > this->sailJoint->UpperLimit(0) + this->d2r) //--> in this condition the cable should be released
-    // {
-    //     // emulates cable release velocity
-    //     if ((this->sailJoint->UpperLimit(0) + sov) < this->sailPosition)
-    //     {
-    //         this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) + sov);
-    //         this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) - sov);
-    //     }
-    //     else
-    //     {
-    //         this->sailJoint->SetUpperLimit(0,this->sailPosition);
-    //         this->sailJoint->SetLowerLimit(0,-this->sailPosition);
-    //     }
-    // }
-    // else if (this->sailPosition < this->sailJoint->UpperLimit(0) - this->d2r) //--> in this condition the cable should be pulled
-    // {
-    //     // emulates cable pull velocity
-    //     if ((this->sailJoint->UpperLimit(0) - sov) > this->sailPosition)
-    //     {
-    //         this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) - sov);
-    //         this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) + sov);
-    //     }
-    //     else
-    //     {
-    //         this->sailJoint->SetUpperLimit(0,this->sailPosition);
-    //         this->sailJoint->SetLowerLimit(0,-this->sailPosition);
-    //     }
-    // }
+    if (this->sailPosition > this->sailJoint->UpperLimit(0) + this->d2r) //--> in this condition the cable should be released
+    {
+        // emulates cable release velocity
+        if ((this->sailJoint->UpperLimit(0) + sov) < this->sailPosition)
+        {   
+            //emula cabo
+            // this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) + sov);
+            // this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) - sov);
+            //Força burta
+            this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) + sov);
+            this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) + sov);
+        }
+        else
+        {
+            //emula cabo
+            // this->sailJoint->SetUpperLimit(0,this->sailPosition);
+            // this->sailJoint->SetLowerLimit(0,-this->sailPosition);
+            //Força burta
+            this->sailJoint->SetUpperLimit(0,this->sailPosition);
+            this->sailJoint->SetLowerLimit(0,this->sailPosition);
+        }
+    }
+    else if (this->sailPosition < this->sailJoint->UpperLimit(0) - this->d2r) //--> in this condition the cable should be pulled
+    {
+        // emulates cable pull velocity
+        if ((this->sailJoint->UpperLimit(0) - sov) > this->sailPosition)
+        {
+            //emula cabo
+            // this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) - sov);
+            // this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) + sov);
+            //emula cabo
+            this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) - sov);
+            this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) - sov);
+        }
+        else
+        {
+            //emula cabo
+            // this->sailJoint->SetUpperLimit(0,this->sailPosition);
+            // this->sailJoint->SetLowerLimit(0,-this->sailPosition);
+            //Força burta
+            this->sailJoint->SetUpperLimit(0,this->sailPosition);
+            this->sailJoint->SetLowerLimit(0,this->sailPosition);
+        }
+    }
 }
