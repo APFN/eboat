@@ -405,7 +405,11 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         self.turn_time = rospy.Time.from_sec(0)
         self.start_time = rospy.Time.from_sec(0)
         self.turning = False
+<<<<<<< HEAD
         self.min_dist_goal = 5
+=======
+        self.min_dist_goal = 20
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
 
         self.EBOAT_HOME = "/home/alvaro/eboat_ws/src/eboat_gz_1"
         gazebo_env.GazeboEnv.__init__(self, os.path.join(self.EBOAT_HOME, "eboat_gazebo/launch/ocean.launch"))
@@ -482,12 +486,17 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         #--> Reward;Penalty by decresing/increasing the distance from the goal.
         progre = (self.DPREV - obs[0]) / self.DMAX
         reward = progre 
+<<<<<<< HEAD
         # min_speed = ((self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5) / 2 # barco tem que andar a 1/2 da velocidade do vento
         min_speed = 0.5 # barco tem que andar a 1/2 da velocidade do vento
+=======
+        min_speed = 1 #m/s 
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
 
         if obs[2] < min_speed: # o barco esta se movendo devagar
             reward = np.min([-2.0*reward, -0.3])
             if obs[2] < 0:
+<<<<<<< HEAD
                 reward =-1
         else: # o barco esta se movendo rapido
             if 60 <= obs[1] <= 60:
@@ -495,6 +504,15 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
 
             # if obs[7] != 0: #ligou motor
             #     reward -= reward + abs(progre)
+=======
+                reward =-10
+        else:
+            if 60 <= obs[1] <= 60:
+                reward *= 2.0
+
+            if obs[7] != 0: #ligou motor
+                reward -= reward + abs(progre)
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
         
         ############# penalidade por mexer muito o leme (media movel) ############################################
         # max_oscilacao = 10 # Define o limite máximo de oscilação aceitável         
@@ -519,6 +537,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         # # else:
         # #     reward += 0.01
 
+<<<<<<< HEAD
         ###################################################################################################        
         ###  #Empurraozinho para o barco aprender a usar a vela na posição correta
             # --> obsData = [distance, trajectory angle, linear velocity, aparent wind speed, aparent wind angle, boom angle, rudder angle, eletric propultion speed, roll angle]
@@ -560,6 +579,38 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         # else:
         #     # reseta a flag se my_var estiver dentro do limite
         #     self.turning = False
+
+        #######################
+=======
+        ####################################################################################################        
+        #Empurraozinho para o barco aprender a usar a vela na posição correta
+        # if (obs[4] < 45 or obs[4]> -45 ): #orçando com vela solta
+        #     if(obs[5] < -15 or obs[5] >15):
+        #         print("PUNIDO: orçando com vela solta: ", self.reward_global)
+        #         reward += -0.1
+        # elif (obs[4] < -160  or obs[4]> 160 ): #Punido popada com vela caçada
+        #     print("!!!!!!!!!!!!!!!POPADA!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        #     if(obs[5] < 70 or obs[5] > -70):
+        #         print("PUNIDO: popada com vela caçada: ", self.reward_global)
+        #         reward += -0.1
+
+        #########################################################################################################
+        #O barco estava aprendendo a ficar fazendo curvas em zerinhos para dribla a logica de reward
+        #criei a logica de punir caso o barco passe mais de 10s fazendo curva
+        self.max_time = rospy.Time.from_sec(5)
+        if ract[1] > 5 or ract[1] < -5: #se o barco esta fazendo um curva, com leme mais de 5graus
+        # se a flag não estiver levantada, levanta e registra o tempo atual
+            if not self.turning:
+                self.turning = True
+                self.start_time = self.current_iteration_time
+            # se já passou mais de 5 segundos, exibe uma mensagem de erro
+            if self.current_iteration_time.to_sec() - self.start_time.to_sec() > self.max_time.to_sec():
+                print("PUNIDO: Fazendo muita Curva <<<<<<<<<<: ", self.reward_global)
+                reward += -1
+        else:
+            # reseta a flag se my_var estiver dentro do limite
+            self.turning = False
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
 
         #######################
 
@@ -643,25 +694,39 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         reward  = self.rewardFunction(observations, ract)
         self.DPREV = dist #atualiza distancia do objetivo
 
+<<<<<<< HEAD
         # #reboot caso ele passe 3x o tempo do menor step
         # max_step_time = Time.from_sec(self.min_iteration_time.to_sec()  #tempo atual
         #                               * 3 *  #3x o tempo atual
         #                               (12 / (self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5))  
         #                                 # multiplicador Max wind_speed / (maginute vento)
+=======
+        #reboot caso ele passe 3x o tempo do menor step
+        max_step_time = Time.from_sec(self.min_iteration_time.to_sec() * 3) 
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
 
          #-->CHECK FOR A TERMINAL STATE
         done = bool((self.DPREV <= self.min_dist_goal) | # chegou no objetivo
                     (self.DPREV > self.DMAX) |  # esta muito longe do objetivo
+<<<<<<< HEAD
                     # (self.current_iteration_time > max_step_time) |  # esta demorando muito
                     (np.isnan(observations).any()) # erro nas observaçoes
                     )                  
         
         # if (self.current_iteration_time > max_step_time):
         #     print("==!!!!!!! Demorou, reboot !!!!!!")
+=======
+                    (self.current_iteration_time > max_step_time) |  # esta muito longe do objetivo
+                    (np.isnan(observations).any()) # erro nas observaçoes
+                    )                  
+        #reboot caso ele passe 3x o tempo do menor step
+        max_step_time = Time.from_sec(self.min_iteration_time.to_sec() * 3) 
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
 
         ########## COMPUTES THE REWARD  #############
         if done :
             if (self.DPREV <= self.min_dist_goal): #chegou no objetivo
+<<<<<<< HEAD
                 reward = 1
                 # print("=====================================================!!!! DONE !!!!  Reward: ", self.reward_global)
                 # if  self.current_iteration_time <= self.min_iteration_time: #chegou mais rapido
@@ -675,6 +740,21 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         #         self.min_dist_goal = self.min_dist_goal -5 # dificulta chegar na boia (default = 30m = "facil")
         #         if(self.min_dist_goal<15):
         #             self.min_dist_goal= 10 #Dificil
+=======
+                reward = 10
+                print("=====================================================!!!! DONE !!!!  Reward: ", self.reward_global)
+                if  self.current_iteration_time <= self.min_iteration_time: #chegou mais rapido
+                    self.min_iteration_time =  self.current_iteration_time
+                    print("!!!!!!!!!!!!!!!!!!!!!!##########!!!!!!!!!!!!!!!!!!!!!!!!  min_iteration_time: ", self.min_iteration_time)
+                    reward = 100 #super recompensa    
+                    print("!!!! DONE !!!!  Super Reward: ", self.reward_global)
+            else: 
+                reward = -1
+        if(self.reward_global>1000): #se ele ja ta aprendendo muito 
+                self.min_dist_goal = self.min_dist_goal -5 # dificulta chegar na boia (default = 30m = "facil")
+                if(self.min_dist_goal<10):
+                    self.min_dist_goal= 5 #Dificil
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
         
         self.reward_global = self.reward_global + reward
 

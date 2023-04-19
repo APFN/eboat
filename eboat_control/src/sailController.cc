@@ -130,20 +130,36 @@ void SailControllerPlugin::OnUpdate()
         if ((this->sailJoint->UpperLimit(0) + sov) < this->sailPosition)
         {   
             //emula cabo
+<<<<<<< HEAD
             this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) + sov);
             this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) - sov);
             //Força burta
             // this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) + sov);
             // this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) + sov);
+=======
+            // this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) + sov);
+            // this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) - sov);
+            //Força burta
+            this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) + sov);
+            this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) + sov);
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
         }
         else
         {
             //emula cabo
+<<<<<<< HEAD
             this->sailJoint->SetUpperLimit(0,this->sailPosition);
             this->sailJoint->SetLowerLimit(0,-this->sailPosition);
             //Força burta
             // this->sailJoint->SetUpperLimit(0,this->sailPosition);
             // this->sailJoint->SetLowerLimit(0,this->sailPosition);
+=======
+            // this->sailJoint->SetUpperLimit(0,this->sailPosition);
+            // this->sailJoint->SetLowerLimit(0,-this->sailPosition);
+            //Força burta
+            this->sailJoint->SetUpperLimit(0,this->sailPosition);
+            this->sailJoint->SetLowerLimit(0,this->sailPosition);
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
         }
     }
     else if (this->sailPosition < this->sailJoint->UpperLimit(0) - this->d2r) //--> in this condition the cable should be pulled
@@ -152,20 +168,36 @@ void SailControllerPlugin::OnUpdate()
         if ((this->sailJoint->UpperLimit(0) - sov) > this->sailPosition)
         {
             //emula cabo
+<<<<<<< HEAD
             this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) - sov);
             this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) + sov);
             //Força burta
             // this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) - sov);
             // this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) - sov);
+=======
+            // this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) - sov);
+            // this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) + sov);
+            //emula cabo
+            this->sailJoint->SetUpperLimit(0,this->sailJoint->UpperLimit(0) - sov);
+            this->sailJoint->SetLowerLimit(0,this->sailJoint->LowerLimit(0) - sov);
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
         }
         else
         {
             //emula cabo
+<<<<<<< HEAD
             this->sailJoint->SetUpperLimit(0,this->sailPosition);
             this->sailJoint->SetLowerLimit(0,-this->sailPosition);
             //Força burta
             // this->sailJoint->SetUpperLimit(0,this->sailPosition);
             // this->sailJoint->SetLowerLimit(0,this->sailPosition);
+=======
+            // this->sailJoint->SetUpperLimit(0,this->sailPosition);
+            // this->sailJoint->SetLowerLimit(0,-this->sailPosition);
+            //Força burta
+            this->sailJoint->SetUpperLimit(0,this->sailPosition);
+            this->sailJoint->SetLowerLimit(0,this->sailPosition);
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
         }
     }
 }

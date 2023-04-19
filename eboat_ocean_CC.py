@@ -19,7 +19,11 @@ import eboat_gym_gaz
 from gym import wrappers
 from stable_baselines3 import A2C, PPO, DQN, SAC
 
+<<<<<<< HEAD
 
+=======
+from stable_baselines3.common.policies import ActorCriticPolicy
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
 
 
 #-->PYTORCH
@@ -174,18 +178,31 @@ def actionRescale(action):
 
 def runTrainingv0(env, logdir, sufix="model1"):
     policy_kwargs = dict(activation_fn=th.nn.ReLU,
+<<<<<<< HEAD
                          net_arch=[(dict(pi=[32, 32, 32], vf=[32, 32]))]
+=======
+                         net_arch=[(dict(pi=[32, 32], vf=[32, 32]))]
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
                          )
 
     model, models_dir, TB_LOG_NAME = runPPO(policy          = "MlpPolicy",
                                             env             = env,
                                             tensorboard_log = logdir,
+<<<<<<< HEAD
                                             ent_coef        = 0.001,
                                             verbose         = 0,
                                             policy_kwargs   = policy_kwargs,
                                             sufix           = sufix)
 
     SAVESTEPS = 100+1
+=======
+                                            ent_coef        = 0.00000000001,
+                                            verbose         = 0,
+                                            policy_kwargs   = policy_kwargs,
+                                            sufix           = sufix)
+    print("##### saiu do runPPo ######")
+    SAVESTEPS = 50+1
+>>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
     TIMESTEPS = 2048*5
     start     = time.time()
     model.save(f"{models_dir}/eboat_ocean_0")
