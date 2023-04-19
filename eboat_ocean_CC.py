@@ -19,7 +19,7 @@ import eboat_gym_gaz
 from gym import wrappers
 from stable_baselines3 import A2C, PPO, DQN, SAC
 
-from stable_baselines3.common.policies import ActorCriticPolicy
+
 
 
 #-->PYTORCH
@@ -174,18 +174,18 @@ def actionRescale(action):
 
 def runTrainingv0(env, logdir, sufix="model1"):
     policy_kwargs = dict(activation_fn=th.nn.ReLU,
-                         net_arch=[(dict(pi=[32, 32], vf=[32, 32]))]
+                         net_arch=[(dict(pi=[32, 32, 32], vf=[32, 32]))]
                          )
-    print("##### entrou no runtraining0 ######")
+
     model, models_dir, TB_LOG_NAME = runPPO(policy          = "MlpPolicy",
                                             env             = env,
                                             tensorboard_log = logdir,
-                                            ent_coef        = 0.00000000001,
+                                            ent_coef        = 0.001,
                                             verbose         = 0,
                                             policy_kwargs   = policy_kwargs,
                                             sufix           = sufix)
-    print("##### saiu do runPPo ######")
-    SAVESTEPS = 50+1
+
+    SAVESTEPS = 100+1
     TIMESTEPS = 2048*5
     start     = time.time()
     model.save(f"{models_dir}/eboat_ocean_0")
@@ -193,14 +193,14 @@ def runTrainingv0(env, logdir, sufix="model1"):
         print("\n\n---------------------------------------------------------")
         print(f"iteration                   : {i}")
         timeA = time.time()
-        print(f"TIMESTEPS                   : {TIMESTEPS}")
+
         model.learn(total_timesteps     = TIMESTEPS  ,
                     log_interval        = 1          ,
                     tb_log_name         = TB_LOG_NAME,
-                    reset_num_timesteps = False     
-                    )        
-        print("#### saiu do learn ###")
+                    reset_num_timesteps = False
+                    )
         model.save(f"{models_dir}/eboat_ocean_{i}")
+
         timeB  = time.time()
         avtime = (timeB - start) / i
         print(f"Time spent in this iteration: {htime(timeB - timeA)}")

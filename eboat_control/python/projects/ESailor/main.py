@@ -64,7 +64,7 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_02042023_ok_tremendo/eboat_ocean_100.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_19042023_05_41_51/eboat_ocean_100.zip")
     
 
     # navpath = [[0.0, 100.0, 0.5],
@@ -123,7 +123,7 @@ def main():
     for waypoint in navpath:
 
         delete_model("wayPointMarker")
-        time.sleep(0.5)
+        time.sleep(1)
         ipose = Pose()
         ipose.position.x = waypoint[0]
         ipose.position.y = waypoint[1]
@@ -138,7 +138,7 @@ def main():
                                      ipose, "world")
             except rospy.ServiceException:
                 print("/gazebo/SpawnModel service call failed")
-            time.sleep(0.5)
+            time.sleep(1)
 
         #########################################################################
 
