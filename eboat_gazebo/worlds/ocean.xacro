@@ -3,14 +3,28 @@
 <!-- Macro to insert the ocean in the world -->
 <world xmlns:xacro="http://ros.org/wiki/xacro">
 	<xacro:macro name="ocean">
+
+        <!--<pose>5 50 140 0 1.55 0</pose>--> <!--Treinamento-->
         <gui fullscreen='0'>
-            <camera name='user_camera'>
-                <!--<pose>5 50 140 0 1.55 0</pose>--> <!--Treinamento-->
-                <pose>0 0 300 0 1.55 0</pose> Main
+            <camera name='user_camera'>                
+                <pose>0 0 300 0 1.55 0</pose>
                 <view_controller>orbit</view_controller>
             </camera>
         </gui>
 
+        <!-- <pose>85 125 5.45 0 0.48 -1.07</pose> -->
+        <!-- <gui fullscreen='0'>
+            <camera name='user_camera'>
+                 <track_visual>
+                    <name>eboat</name>
+                    <static>true</static>
+                    <use_model_frame>true</use_model_frame>
+                    <xyz>-30 0 10</xyz>
+                    
+                    <inherit_yaw>true</inherit_yaw>
+                </track_visual>
+            </camera>
+        </gui> -->
 
         <scene>
 			<sky>
@@ -78,11 +92,11 @@
         </include>-->
 
         <!--Marker to indicate the effort center for the wind forces-->
-        <!-- <include>
+        <include>
             <name>wayPointMarker</name>
             <pose>0 100.0 0 0 0 0</pose>
             <uri>/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wayPointMarker</uri>
-        </include> -->
+        </include>
 
         <!-- Marker to indicate the effort center for the wind forces
         <include>
