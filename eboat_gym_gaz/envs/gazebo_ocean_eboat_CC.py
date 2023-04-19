@@ -17,6 +17,9 @@ from tf.transformations import quaternion_from_euler
 from gazebo_msgs.srv import SetModelState
 from gazebo_msgs.msg import ModelState
 
+from rosgraph_msgs.msg import Clock
+from rospy.rostime import Time
+
 from filterpy.kalman import KalmanFilter
 
 def vet2str(vet):
@@ -63,7 +66,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         #--> We will use a rescaled action space
         self.action_space = spaces.Box(low   = -1 ,
                                        high  = 1  ,
-                                       shape = (3,),
+                                       shape = (2,),
                                        dtype = np.float32)
 
         # --> We will use a rescaled action space
@@ -110,7 +113,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         self.windSpeed[:2] = [x,y]
         
         if np.random.uniform() < 0.1: # 30% das vezes é vento contra. "na cara"
-            self.windSpeed[:2] = [0,(magnitude*-1)]
+            self.windSpeed[:2] = [(magnitude*-1), 0]
         #print(self.windSpeed)
 
     def rewardFunction(self, obs, ract):
@@ -291,7 +294,6 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         return filtered_x
 
 
-
     def step(self, action):
         #print("#################### step no CC0 ###################")
         #--> UNPAUSE SIMULATION
@@ -439,10 +441,19 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
 
 
 class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
+    
+    def clock_callback(self, msg: Clock):
+        # Extrai o tempo atual de simulação da mensagem
+        self.current_iteration_time = msg.clock
+
     def __init__(self):
         #print("#################### entrou no CC1 ###################")
 
         self.reward_global = 0
+        self.turn_time = rospy.Time.from_sec(0)
+        self.start_time = rospy.Time.from_sec(0)
+        self.turning = False
+        self.min_dist_goal = 5
 
         self.EBOAT_HOME = "/home/alvaro/eboat_ws/src/eboat_gz_1"
         gazebo_env.GazeboEnv.__init__(self, os.path.join(self.EBOAT_HOME, "eboat_gazebo/launch/ocean.launch"))
@@ -451,10 +462,14 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         self.rudderAng_pub = rospy.Publisher("/eboat/control_interface/rudder", Float32, queue_size=5)
         self.propVel_pub = rospy.Publisher("/eboat/control_interface/propulsion", Int16, queue_size=5)
         self.wind_pub = rospy.Publisher("/eboat/atmosferic_control/wind", Point, queue_size=5)
+
         self.unpause = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
         self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
         self.reset_proxy = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
         self.set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
+
+        rospy.Subscriber('/clock', Clock, self.clock_callback)
+        self.min_iteration_time = rospy.Time.from_sec(10*60*60) 
 
         # --> GLOBAL VARIABLES
         self.DTOL = 25.0  # --> Threshold for distance. If the boat goes far than INITIAL POSITION + DMAX, a done signal is trigged.
@@ -465,13 +480,13 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         # --> We will use a rescaled action space
         self.action_space = spaces.Box(low=-1,
                                        high=1,
-                                       shape=(3,),
+                                       shape=(2,),
                                        dtype=np.float32)
 
         # --> We will use a rescaled action space
         self.observation_space = spaces.Box(low=-1,
                                             high=1,
-                                            shape=(5,),
+                                            shape=(9,),
                                             dtype=np.float32)
         self.reward_range = (-1, 1)
 
@@ -506,6 +521,53 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         R = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]], dtype=float)
 
         return np.dot(np.array([1, 0], dtype=float) * modulus, R)
+    
+    def actionRescale(self, action):
+        raction = np.zeros(2, dtype = np.float32)
+        # # #--> Eletric propulsion [-5, 5]
+        # raction[0] = action[0] * 5.0
+        #--> Boom angle [0, 90]
+        raction[0] = (action[0] + 1) * 45.0
+        #--> Rudder angle [-60, 60]
+        raction[1] = action[1] * 60.0
+        return raction
+    
+    def observationRescale(self, observations):
+        lobs = len(observations)
+        robs = np.zeros(lobs, dtype=np.float32)
+        # --> Distance from the waypoint (m) [0   , DMAX];
+        robs[0] = 2 * (observations[0] / self.DMAX) - 1
+        # --> Trajectory angle               [-180, 180]
+        robs[1] = observations[1] / 180.0
+        # --> Boat linear velocity (m/s)     [0   , 10 ]
+        robs[2] = observations[2] / 5 - 1
+        # --> Aparent wind speed (m/s)       [0   , 30]
+        robs[3] = observations[3] / 15 - 1
+        # --> Apparent wind angle            [-180, 180]
+        robs[4] = observations[4] / 180.0
+        if lobs > 5:
+            # --> Boom angle                     [0   , 90]
+            robs[5] = (observations[5] / 45.0) - 1
+            # --> Rudder angle                   [-60 , 60 ]
+            robs[6] = observations[6] / 60.0
+            # --> Electric propulsion speed      [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
+            robs[7] = observations[7] / 5.0
+            # --> Roll angle                     [-180, 180]
+            robs[8] = observations[8] / 180.0
+
+        return robs
+
+    def sampleWindSpeed(self, max_wind_speed = 12):
+        angle = np.random.uniform(low=-180, high=180) * math.pi / 90
+        magnitude = np.random.uniform(low=3, high=12)
+        x = magnitude * math.cos(angle)
+        y = magnitude * math.sin(angle)
+        self.windSpeed[:2] = [x,y]
+        
+        if np.random.uniform() < 0.1: # 30% das vezes é vento contra. "na cara"
+            self.windSpeed[:2] = [(magnitude*-1), 0]
+        #print(self.windSpeed)
+
     def setWindSpeed(self, vector):
         self.windSpeed = vector
 
@@ -542,6 +604,93 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         #--> Set the boat's initial pose
         self.setInitialState(model_name, theta)
 
+    def rewardFunction(self, obs, ract):
+        #--> Reward;Penalty by decresing/increasing the distance from the goal.
+        progre = (self.DPREV - obs[0]) / self.DMAX
+        reward = progre 
+        min_speed = 1 #m/s 
+
+        if obs[2] < min_speed: # o barco esta se movendo devagar
+            reward = np.min([-2.0*reward, -0.3])
+            if obs[2] < 0:
+                reward =-10
+        else:
+            if 60 <= obs[1] <= 60:
+                reward *= 2.0
+
+            if obs[7] != 0: #ligou motor
+                reward -= reward + abs(progre)
+
+        return reward
+
+    def step(self, action):
+
+        rospy.wait_for_service("/gazebo/unpause_physics")
+        try:
+            self.unpause()
+        except( rospy.ServiceException) as e:
+            print(("/gazebo/unpause_physics service call failed!"))
+
+        ract = self.actionRescale(action) #-->SEND ACTION TO THE BOAT CONTROL INTERFACE
+
+        # self.propVel_pub.publish(int(ract[0])) #comentado se motor desligado
+        self.boomAng_pub.publish(ract[0])
+        self.rudderAng_pub.publish(ract[1])
+        
+        #-->GET OBSERVATIONS (NEXT STATE)
+        observations = self.getObservations()
+
+        #-->PAUSE SIMULATION
+        rospy.wait_for_service("/gazebo/pause_physics")
+        try:
+            self.pause()
+        except( rospy.ServiceException) as e:
+            print(("/gazebo/pause_physics service call failed!"))
+           
+        dist = observations[0]        
+        
+        if np.isnan(observations).any(): #np.isnan(observations).any()
+            print("\n\n-------------------------------------")
+            print(f"distance: {observations[0]}")
+            print(f"traj ang: {observations[1]}")
+            print(f"boat vel: {observations[2]}")
+            print(f"wind vel: {observations[3]}")
+            print(f"wind ang: {observations[4]}")
+            print(f"boom ang: {observations[5]}")
+            print(f"rud ang : {observations[6]}")
+            print(f"prop    : {observations[7]}")
+            print(f"roll ang: {observations[8]}")
+            print("-------------------------------------\n")
+            #--> WAIT FOR ACKNOWLEDGEMENT FROM USER
+            # _ = input("Unpause: ")
+
+        reward  = self.rewardFunction(observations, ract)
+        self.DPREV = dist #atualiza distancia do objetivo
+
+         #-->CHECK FOR A TERMINAL STATE
+        done = bool((self.DPREV <= self.min_dist_goal) | # chegou no objetivo
+                    (self.DPREV > self.DMAX) |  # esta muito longe do objetivo
+                    (np.isnan(observations).any()) # erro nas observaçoes
+                    )                  
+
+        ########## COMPUTES THE REWARD  #############
+        if done :
+            if (self.DPREV <= self.min_dist_goal): #chegou no objetivo
+                reward = 1
+                print("=====================================================!!!! DONE !!!!  Reward: ", self.reward_global)
+                if  self.current_iteration_time <= self.min_iteration_time: #chegou mais rapido
+                    self.min_iteration_time =  self.current_iteration_time
+                    print("!!!!!!!!!!!!!!!!!!!!!!##########!!!!!!!!!!!!!!!!!!!!!!!!  min_iteration_time: ", self.min_iteration_time)
+                    reward = 10 #super recompensa    
+                    print("!!!! DONE !!!!  Super Reward: ", self.reward_global)
+            else: 
+                reward = -1
+
+        
+        self.reward_global = self.reward_global + reward
+
+        return self.observationRescale(observations), reward, done, {}
+   
     def reset(self):
         #print("#################### reset no CC1 ###################")
         #-->RESETS THE STATE OF THE ENVIRONMENT.
