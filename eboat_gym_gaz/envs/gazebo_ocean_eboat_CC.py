@@ -4,7 +4,6 @@ import roslaunch
 import numpy as np
 import os
 import math
-import time
 
 from gym import utils, spaces
 from gym_gazebo.envs import gazebo_env
@@ -17,10 +16,8 @@ from gym.utils import seeding
 from tf.transformations import quaternion_from_euler
 from gazebo_msgs.srv import SetModelState
 from gazebo_msgs.msg import ModelState
-from gazebo_msgs.srv import GetWorldProperties
-from rosgraph_msgs.msg import Clock
-from rospy.rostime import Time
 
+from filterpy.kalman import KalmanFilter
 
 def vet2str(vet):
     vetstr = "["
@@ -38,15 +35,7 @@ buffer = []
 
 
 
-
-
 class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
-
-    def clock_callback(self, msg: Clock):
-        # Extrai o tempo atual de simulação da mensagem
-        min_iteration_time = msg.clock
-
-
         
     def __init__(self):   
         print("#################### entrou no CC0 ###################")
@@ -54,22 +43,16 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         self.reward_global = 0
 
         self.EBOAT_HOME = "/home/alvaro/eboat_ws/src/eboat_gz_1"
-
         gazebo_env.GazeboEnv.__init__(self, os.path.join(self.EBOAT_HOME,"eboat_gazebo/launch/ocean.launch"))
 
         self.boomAng_pub   = rospy.Publisher("/eboat/control_interface/sail"       , Float32, queue_size=5)
         self.rudderAng_pub = rospy.Publisher("/eboat/control_interface/rudder"     , Float32, queue_size=5)
         self.propVel_pub   = rospy.Publisher("/eboat/control_interface/propulsion", Int16  , queue_size=5)
         self.wind_pub      = rospy.Publisher("/eboat/atmosferic_control/wind"      , Point  , queue_size=5)
-
         self.unpause       = rospy.ServiceProxy('/gazebo/unpause_physics' , Empty)
         self.pause         = rospy.ServiceProxy('/gazebo/pause_physics'   , Empty)
         self.reset_proxy   = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
         self.set_state     = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
-
-        # rospy.wait_for_service('/gazebo/get_world_properties')
-        # self.get_world_properties = rospy.ServiceProxy('/gazebo/get_world_properties', GetWorldProperties)
-        rospy.Subscriber('/clock', Clock, self.clock_callback)
 
         #--> GLOBAL VARIABLES
         self.DTOL  = 25.0  #--> Threshold for distance. If the boat goes far than INITIAL POSITION + DMAX, a done signal is trigged.
@@ -80,7 +63,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         #--> We will use a rescaled action space
         self.action_space = spaces.Box(low   = -1 ,
                                        high  = 1  ,
-                                       shape = (2,),
+                                       shape = (3,),
                                        dtype = np.float32)
 
         # --> We will use a rescaled action space
@@ -127,7 +110,7 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         self.windSpeed[:2] = [x,y]
         
         if np.random.uniform() < 0.1: # 30% das vezes é vento contra. "na cara"
-            self.windSpeed[:2] = [(magnitude*-1), 0]
+            self.windSpeed[:2] = [0,(magnitude*-1)]
         #print(self.windSpeed)
 
     def rewardFunction(self, obs, ract):
@@ -135,16 +118,16 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         progre = (self.DPREV - obs[0]) / self.DMAX
         reward = progre
 
-        if obs[2] < 2:
+        if obs[2] < 1:
             #--> Have a velocity slower than 0.4 m/s or negative generate a penalty.
             reward -= 0.2
         elif (abs(obs[1]) < 60):
             #--> Have a velocity greater than 0.4 m/s toward the objective generates a reward.
             reward += 0.01 * (1.0 - abs(obs[1]) / 60.0)
 
-            # if ((obs[2] > 2) & (obs[7] == 0)): #!!!!!!!!!!! LIGAr QUANDO ESTIVE TREINANDO COM MOTOR !!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #     #--> Reward for boat speedy greater than 1.0 m/s if the electric engine is offline.
-            #     reward += 2
+            if ((obs[2] > 2) & (obs[7] == 0)):
+                #--> Reward for boat speedy greater than 1.0 m/s if the electric engine is offline.
+                reward += 2
 
         # Define o limite máximo de oscilação aceitável
         max_oscilacao = 10
@@ -174,23 +157,25 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
             reward += 1.0
         
         if std_dev_vela > max_oscilacao:
-            reward += -0.0001
+            reward = -0.0001
             #print("#####oscilou muito a vela", std_dev_vela, actions_buffer_vela)
         else:
-            reward += 1.0
+            reward = 1.0
         
-
         if obs[7] != 0:
                  reward -= reward + abs(progre)
-        
-        elif (obs[4] < 45 or obs[4]> -45 ): #orçando com vela solta
-            if(obs[5] < -15 or obs[5] >15):
-                print("PUNIDO: orçando com vela solta")
-                reward += -0.1
-        elif (obs[4] < -160  or obs[4]> 160 ): #Punido popada com vela caçada
-            if(obs[5] < 70 or obs[5] > -70):
-                print("PUNIDO: popada com vela caçada")
-                reward += -0.1
+
+        #================================Edu==========================
+        # progre = (self.DPREV - obs[0]) / self.DMAX
+        # reward = progre
+        # if obs[2] < 2:
+        #     reward = np.min([-2.0*reward, -0.3])
+        # else:
+        #     if obs[1] < 60:
+        #         reward *= 2.0
+
+        #     if obs[7] != 0:
+        #         reward -= reward + abs(progre)
 
         return reward
 
@@ -245,14 +230,13 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         return np.array(obsData, dtype=float)
 
     def actionRescale(self, action):
-        raction = np.zeros(2, dtype = np.float32)
+        raction = np.zeros(3, dtype = np.float32)
         # #--> Eletric propulsion [-5, 5]
-        # raction[0] = action[0] * 5.0
+        raction[0] = action[0] * 5.0
         #--> Boom angle [0, 90]
-        # raction[0] = (action[0] + 1) * 45.0 # se a vela estiver sendo obrigada  a posição
-        raction[0] = (action[0] ) * 90
+        raction[1] = (action[1] + 1) * 45.0
         #--> Rudder angle [-60, 60]
-        raction[1] = action[1] * 60.0
+        raction[2] = action[2] * 60.0
         return raction
 
     def rescale(self, m, rmin, rmax, tmin, tmax):
@@ -275,8 +259,8 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
 
     def observationRescale(self, observations):
         robs = np.zeros(5, dtype = np.float32)
-        #--> Distance from the waypoint (m) [0   , DMAX];
-        robs[0] = 2 * (observations[0] / self.DMAX) - 1
+        #--> Distance from the waypoint (m) [0   , 200];
+        robs[0] = observations[0]/100 - 1
         #--> Trajectory angle               [-180, 180];
         robs[1] = observations[1] / 180.0
         #--> Boat linear velocity (m/s)     [0   , 10 ];
@@ -292,12 +276,23 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
     
+    def simple_moving_average_filter(self, x, window_size):
+        
+        # Adiciona o valor atual no final do buffer
+        buffer.append(x)
+        
+        # Remove o valor mais antigo do início do buffer
+        if len(buffer) > window_size:
+            buffer.pop(0)
+        
+        # Calcula a média móvel do buffer
+        filtered_x = sum(buffer) / len(buffer)
+        
+        return filtered_x
+
 
 
     def step(self, action):
-
-        min_iteration_time = 0
-
         #print("#################### step no CC0 ###################")
         #--> UNPAUSE SIMULATION
         rospy.wait_for_service("/gazebo/unpause_physics")
@@ -308,10 +303,16 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
 
         #-->SEND ACTION TO THE BOAT CONTROL INTERFACE
         ract = self.actionRescale(action)
+        # print("sem filtro",ract[0],ract[1])
+        # # print(f"---> action = {action}")
+        # # print(f"---> ract   = {ract}")
+        # ract[0]=self.simple_moving_average_filter(ract[0],3)
+        # ract[1]=self.simple_moving_average_filter(ract[1],3)
+        # print("com filtro",ract[0],ract[1])        
 
-        # self.propVel_pub.publish(int(ract[0]))
-        self.boomAng_pub.publish(ract[0])
-        self.rudderAng_pub.publish(ract[1])
+        self.propVel_pub.publish(int(ract[0]))
+        self.boomAng_pub.publish(ract[1])
+        self.rudderAng_pub.publish(ract[2])
 
         
         #-->GET OBSERVATIONS (NEXT STATE)
@@ -358,10 +359,6 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
             #--> WAIT FOR ACKNOWLEDGEMENT FROM USER
             # _ = input("Unpause: ")
 
-
-        current_iteration_time = min_iteration_time
-        print("simluation time: ", current_iteration_time)
-
         
         #-->COMPUTES THE REWARD
         if not done:
@@ -370,46 +367,82 @@ class GazeboOceanEboatEnvCC(gazebo_env.GazeboEnv):
             #print(reward)
             self.DPREV = dist                               #-->UPDATE CURRENT DISTANCE
         elif (dist > self.DMAX):
-            print("COMPUTES THE REWARD: dist > self.DMAX")
+            #print("COMPUTES THE REWARD: dist > self.DMAX")
             reward = -1
         else:
             print("COMPUTES THE REWARD: DONE")
-            current_iteration_time = min_iteration_time
-            print("simluation time: ", current_iteration_time)
-            if current_iteration_time <= min_iteration_time:
-                print("min_iteration_time: ", min_iteration_time)
-                min_iteration_time = current_iteration_time
-                # computar a recompensa
-                reward += 100
-            else:
-                reward += 10
+            reward  = 10
             self.reset()
         
         self.reward_global = self.reward_global + reward
-        print("Reward global:", self.reward_global)
+        #print("Reward global:", self.reward_global)
 
         return self.observationRescale(observations), reward, done, {}
 
+    def reset(self):
+        print("#################### reset no CC0 ###################")
+        #-->RESETS THE STATE OF THE ENVIRONMENT.
+        rospy.wait_for_service('/gazebo/reset_simulation')
+
+        #print("##### resetou ######")
+        try:
+            self.reset_proxy()
+        except (rospy.ServiceException) as e:
+            print(("/gazebo/reset_simulation service call failed!"))
+
+        #-->SET RANDOM INITIAL STATE
+        self.setInitialState("eboat", 90)
+        # self.sampleInitialState("eboat")
+
+        #-->SET RANDOM WIND SPEED AND DIRECTION
+        # self.sampleWindSpeed()
+        self.wind_pub.publish(Point(self.windSpeed[0], self.windSpeed[1], self.windSpeed[2]))
+
+        #-->SET THE ACTUATORS BACK TO THE DEFAULT SETTING
+        self.propVel_pub.publish(0)
+        self.boomAng_pub.publish(0.0)
+        self.rudderAng_pub.publish(0.0)
+
+        #-->UNPAUSE SIMULATION TO MAKE OBSERVATION
+        rospy.wait_for_service('/gazebo/unpause_physics')
+        try:
+            self.unpause()
+        except( rospy.ServiceException) as e:
+            print(("/gazebo/unpause_physics service call failed!"))
+
+        #-->COLLECT OBSERVATIONS
+        observations = self.getObservations()
+
+        # -->RESET INITIAL DISTANCE
+        self.DPREV = observations[0]
+        # self.DMAX  = observations[0] + self.DTOL
+        # self.D0 = observations[0]
+
+        #-->PAUSE SIMULATION
+        rospy.wait_for_service("/gazebo/pause_physics")
+        try:
+            self.pause()
+        except( rospy.ServiceException) as e:
+            print(("/gazebo/pause_physics service call failed!"))
+        # print("##### saiu de resetou ######")
+
+        try:
+            self.D0 = observations[0]
+            #print("################################################ D0:", self.D0)
+            self.DMAX  = self.D0 + self.DTOL  #--> IT TAKE THE INITIAL DISTANCE IN CONSIDERATION
+            self.DPREV = self.D0
+        except:
+            pass
+        
+        print("Reward global:", self.reward_global)
+        return self.observationRescale(observations)
+
 
 class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
-
-
-    def clock_callback(self, msg: Clock):
-        # Extrai o tempo atual de simulação da mensagem
-        self.current_iteration_time = msg.clock
-
     def __init__(self):
         #print("#################### entrou no CC1 ###################")
 
         self.reward_global = 0
-        self.turn_time = rospy.Time.from_sec(0)
-        self.start_time = rospy.Time.from_sec(0)
-        self.turning = False
-<<<<<<< HEAD
-        self.min_dist_goal = 5
-=======
-        self.min_dist_goal = 20
->>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
 
         self.EBOAT_HOME = "/home/alvaro/eboat_ws/src/eboat_gz_1"
         gazebo_env.GazeboEnv.__init__(self, os.path.join(self.EBOAT_HOME, "eboat_gazebo/launch/ocean.launch"))
@@ -418,14 +451,10 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         self.rudderAng_pub = rospy.Publisher("/eboat/control_interface/rudder", Float32, queue_size=5)
         self.propVel_pub = rospy.Publisher("/eboat/control_interface/propulsion", Int16, queue_size=5)
         self.wind_pub = rospy.Publisher("/eboat/atmosferic_control/wind", Point, queue_size=5)
-
         self.unpause = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
         self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
         self.reset_proxy = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
         self.set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
-
-        rospy.Subscriber('/clock', Clock, self.clock_callback)
-        self.min_iteration_time = rospy.Time.from_sec(10*60*60)
 
         # --> GLOBAL VARIABLES
         self.DTOL = 25.0  # --> Threshold for distance. If the boat goes far than INITIAL POSITION + DMAX, a done signal is trigged.
@@ -436,7 +465,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         # --> We will use a rescaled action space
         self.action_space = spaces.Box(low=-1,
                                        high=1,
-                                       shape=(2,),
+                                       shape=(3,),
                                        dtype=np.float32)
 
         # --> We will use a rescaled action space
@@ -477,145 +506,8 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         R = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]], dtype=float)
 
         return np.dot(np.array([1, 0], dtype=float) * modulus, R)
-   
     def setWindSpeed(self, vector):
         self.windSpeed = vector
-
-
-    def rewardFunction(self, obs, ract):
-        #--> Reward;Penalty by decresing/increasing the distance from the goal.
-        progre = (self.DPREV - obs[0]) / self.DMAX
-        reward = progre 
-<<<<<<< HEAD
-        # min_speed = ((self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5) / 2 # barco tem que andar a 1/2 da velocidade do vento
-        min_speed = 0.5 # barco tem que andar a 1/2 da velocidade do vento
-=======
-        min_speed = 1 #m/s 
->>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
-
-        if obs[2] < min_speed: # o barco esta se movendo devagar
-            reward = np.min([-2.0*reward, -0.3])
-            if obs[2] < 0:
-<<<<<<< HEAD
-                reward =-1
-        else: # o barco esta se movendo rapido
-            if 60 <= obs[1] <= 60:
-                reward *= 2.0 # o barco esta se movendo rapido em direção ao obj
-
-            # if obs[7] != 0: #ligou motor
-            #     reward -= reward + abs(progre)
-=======
-                reward =-10
-        else:
-            if 60 <= obs[1] <= 60:
-                reward *= 2.0
-
-            if obs[7] != 0: #ligou motor
-                reward -= reward + abs(progre)
->>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
-        
-        ############# penalidade por mexer muito o leme (media movel) ############################################
-        # max_oscilacao = 10 # Define o limite máximo de oscilação aceitável         
-        # time_window = 4 # Define o tamanho do intervalo de tempo
-        # # Adiciona a ação atual ao buffer de ações
-        # actions_buffer_vela.append(ract[0])
-        # actions_buffer_leme.append(ract[1])        
-        # # Remove a ação mais antiga do buffer se o seu tamanho exceder o intervalo de tempo
-        # if len(actions_buffer_leme) > time_window:
-        #     actions_buffer_leme.pop(0)
-        #     actions_buffer_vela.pop(0)        
-        # # Calcula o desvio padrão das ações no buffer
-        # std_dev_leme = np.std(actions_buffer_leme)
-        # std_dev_vela = np.std(actions_buffer_vela)                
-        # # Se o desvio padrão exceder o limite máximo, penalize o modelo
-        # if std_dev_leme > max_oscilacao:
-        #     reward += -0.001
-        #     print("#####  oscilou muito o leme", std_dev_leme, actions_buffer_leme)
-        # if std_dev_vela > max_oscilacao:
-        #     reward += -0.001
-        #     print("#####  oscilou muito a vela", std_dev_vela, actions_buffer_vela)
-        # # else:
-        # #     reward += 0.01
-
-<<<<<<< HEAD
-        ###################################################################################################        
-        ###  #Empurraozinho para o barco aprender a usar a vela na posição correta
-            # --> obsData = [distance, trajectory angle, linear velocity, aparent wind speed, aparent wind angle, boom angle, rudder angle, eletric propultion speed, roll angle]
-            #               [   0    ,        1        ,       2        ,         3         ,         4         ,     5     ,      6      ,            7            ,     8     ]
-        # if (  -100 > obs[4] >  100 ): #orçando 
-        #     print("Orçaaaaaaaaaaaaaaaaaaaa: ", self.reward_global)
-        #     if( -15 > obs[5] >  15 ):  #orçando com vela solta
-        #         print("PUNIDO: orçando com vela solta: ", self.reward_global)
-        #         reward += -0.0001
-        # elif (  30 > obs[4] >  -30 ): #popada 
-        #     print("Popadaaaaaaa: ", self.reward_global)
-        #     if( -70 > obs[5] >  70 ): #Punido popada com vela caçada
-        #         print("PUNIDO: popada com vela caçada: ", self.reward_global)
-        #         reward += -0.0001
-
-        # if (  obs[4] > 0 ):
-        #     if (  obs[5] > 0 ):
-        #         print("PUNIDO: Vela lado errado - BE: ", self.reward_global)
-        #         reward += -0.1
-        # if (  obs[4] < 0 ):
-        #     if (  obs[5] < 0 ):
-        #         print("PUNIDO: Vela lado errado - BO: ", self.reward_global)
-        #         reward += -0.1
-
-
-        #########################################################################################################
-        #O barco estava aprendendo a ficar fazendo curvas em zerinhos para dribla a logica de reward
-        #criei a logica de punir caso o barco passe mais de 10s fazendo curva
-        # self.max_time = rospy.Time.from_sec(10)
-        # if ract[1] > 5 or ract[1] < -5: #se o barco esta fazendo um curva, com leme mais de 5graus
-        # # se a flag não estiver levantada, levanta e registra o tempo atual
-        #     if not self.turning:
-        #         self.turning = True
-        #         self.start_time = self.current_iteration_time
-        #     # se já passou mais de 5 segundos, exibe uma mensagem de erro
-        #     if self.current_iteration_time.to_sec() - self.start_time.to_sec() > self.max_time.to_sec():
-        #         print("PUNIDO: Fazendo muita Curva <<<<<<<<<<: ", self.reward_global)
-        #         reward += -1
-        # else:
-        #     # reseta a flag se my_var estiver dentro do limite
-        #     self.turning = False
-
-        #######################
-=======
-        ####################################################################################################        
-        #Empurraozinho para o barco aprender a usar a vela na posição correta
-        # if (obs[4] < 45 or obs[4]> -45 ): #orçando com vela solta
-        #     if(obs[5] < -15 or obs[5] >15):
-        #         print("PUNIDO: orçando com vela solta: ", self.reward_global)
-        #         reward += -0.1
-        # elif (obs[4] < -160  or obs[4]> 160 ): #Punido popada com vela caçada
-        #     print("!!!!!!!!!!!!!!!POPADA!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        #     if(obs[5] < 70 or obs[5] > -70):
-        #         print("PUNIDO: popada com vela caçada: ", self.reward_global)
-        #         reward += -0.1
-
-        #########################################################################################################
-        #O barco estava aprendendo a ficar fazendo curvas em zerinhos para dribla a logica de reward
-        #criei a logica de punir caso o barco passe mais de 10s fazendo curva
-        self.max_time = rospy.Time.from_sec(5)
-        if ract[1] > 5 or ract[1] < -5: #se o barco esta fazendo um curva, com leme mais de 5graus
-        # se a flag não estiver levantada, levanta e registra o tempo atual
-            if not self.turning:
-                self.turning = True
-                self.start_time = self.current_iteration_time
-            # se já passou mais de 5 segundos, exibe uma mensagem de erro
-            if self.current_iteration_time.to_sec() - self.start_time.to_sec() > self.max_time.to_sec():
-                print("PUNIDO: Fazendo muita Curva <<<<<<<<<<: ", self.reward_global)
-                reward += -1
-        else:
-            # reseta a flag se my_var estiver dentro do limite
-            self.turning = False
->>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
-
-        #######################
-
-        return reward
-
 
     def getWindSpeed(self):
         return self.windSpeed
@@ -650,116 +542,6 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         #--> Set the boat's initial pose
         self.setInitialState(model_name, theta)
 
-    def step(self, action):
-
-        rospy.wait_for_service("/gazebo/unpause_physics")
-        try:
-            self.unpause()
-        except( rospy.ServiceException) as e:
-            print(("/gazebo/unpause_physics service call failed!"))
-
-        ract = self.actionRescale(action) #-->SEND ACTION TO THE BOAT CONTROL INTERFACE
-
-        # self.propVel_pub.publish(int(ract[0])) #comentado se motor desligado
-        self.boomAng_pub.publish(ract[0])
-        self.rudderAng_pub.publish(ract[1])
-        
-        #-->GET OBSERVATIONS (NEXT STATE)
-        observations = self.getObservations()
-
-        #-->PAUSE SIMULATION
-        rospy.wait_for_service("/gazebo/pause_physics")
-        try:
-            self.pause()
-        except( rospy.ServiceException) as e:
-            print(("/gazebo/pause_physics service call failed!"))
-           
-        dist = observations[0]        
-        
-        if np.isnan(observations).any(): #np.isnan(observations).any()
-            print("\n\n-------------------------------------")
-            print(f"distance: {observations[0]}")
-            print(f"traj ang: {observations[1]}")
-            print(f"boat vel: {observations[2]}")
-            print(f"wind vel: {observations[3]}")
-            print(f"wind ang: {observations[4]}")
-            print(f"boom ang: {observations[5]}")
-            print(f"rud ang : {observations[6]}")
-            print(f"prop    : {observations[7]}")
-            print(f"roll ang: {observations[8]}")
-            print("-------------------------------------\n")
-            #--> WAIT FOR ACKNOWLEDGEMENT FROM USER
-            # _ = input("Unpause: ")
-
-        reward  = self.rewardFunction(observations, ract)
-        self.DPREV = dist #atualiza distancia do objetivo
-
-<<<<<<< HEAD
-        # #reboot caso ele passe 3x o tempo do menor step
-        # max_step_time = Time.from_sec(self.min_iteration_time.to_sec()  #tempo atual
-        #                               * 3 *  #3x o tempo atual
-        #                               (12 / (self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5))  
-        #                                 # multiplicador Max wind_speed / (maginute vento)
-=======
-        #reboot caso ele passe 3x o tempo do menor step
-        max_step_time = Time.from_sec(self.min_iteration_time.to_sec() * 3) 
->>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
-
-         #-->CHECK FOR A TERMINAL STATE
-        done = bool((self.DPREV <= self.min_dist_goal) | # chegou no objetivo
-                    (self.DPREV > self.DMAX) |  # esta muito longe do objetivo
-<<<<<<< HEAD
-                    # (self.current_iteration_time > max_step_time) |  # esta demorando muito
-                    (np.isnan(observations).any()) # erro nas observaçoes
-                    )                  
-        
-        # if (self.current_iteration_time > max_step_time):
-        #     print("==!!!!!!! Demorou, reboot !!!!!!")
-=======
-                    (self.current_iteration_time > max_step_time) |  # esta muito longe do objetivo
-                    (np.isnan(observations).any()) # erro nas observaçoes
-                    )                  
-        #reboot caso ele passe 3x o tempo do menor step
-        max_step_time = Time.from_sec(self.min_iteration_time.to_sec() * 3) 
->>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
-
-        ########## COMPUTES THE REWARD  #############
-        if done :
-            if (self.DPREV <= self.min_dist_goal): #chegou no objetivo
-<<<<<<< HEAD
-                reward = 1
-                # print("=====================================================!!!! DONE !!!!  Reward: ", self.reward_global)
-                # if  self.current_iteration_time <= self.min_iteration_time: #chegou mais rapido
-                #     self.min_iteration_time =  self.current_iteration_time
-                #     print("!!!!!!!!!!!!!!!!!!!!!!##########!!!!!!!!!!!!!!!!!!!!!!!!  min_iteration_time: ", self.min_iteration_time)
-                #     reward = 100#super recompensa    
-                #     print("!!!! DONE !!!!  Super Reward: ", self.reward_global)
-            else: 
-                reward = -1
-        # if(self.reward_global>1500): #se ele ja ta aprendendo muito 
-        #         self.min_dist_goal = self.min_dist_goal -5 # dificulta chegar na boia (default = 30m = "facil")
-        #         if(self.min_dist_goal<15):
-        #             self.min_dist_goal= 10 #Dificil
-=======
-                reward = 10
-                print("=====================================================!!!! DONE !!!!  Reward: ", self.reward_global)
-                if  self.current_iteration_time <= self.min_iteration_time: #chegou mais rapido
-                    self.min_iteration_time =  self.current_iteration_time
-                    print("!!!!!!!!!!!!!!!!!!!!!!##########!!!!!!!!!!!!!!!!!!!!!!!!  min_iteration_time: ", self.min_iteration_time)
-                    reward = 100 #super recompensa    
-                    print("!!!! DONE !!!!  Super Reward: ", self.reward_global)
-            else: 
-                reward = -1
-        if(self.reward_global>1000): #se ele ja ta aprendendo muito 
-                self.min_dist_goal = self.min_dist_goal -5 # dificulta chegar na boia (default = 30m = "facil")
-                if(self.min_dist_goal<10):
-                    self.min_dist_goal= 5 #Dificil
->>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
-        
-        self.reward_global = self.reward_global + reward
-
-        return self.observationRescale(observations), reward, done, {}
-    
     def reset(self):
         #print("#################### reset no CC1 ###################")
         #-->RESETS THE STATE OF THE ENVIRONMENT.
@@ -1181,5 +963,4 @@ class GazeboOceanEboatEnvCC2(gazebo_env.GazeboEnv):
             print(("/gazebo/pause_physics service call failed!"))
 
         return self.observationRescale(observations)
-
 

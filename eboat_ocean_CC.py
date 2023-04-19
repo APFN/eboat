@@ -19,13 +19,6 @@ import eboat_gym_gaz
 from gym import wrappers
 from stable_baselines3 import A2C, PPO, DQN, SAC
 
-<<<<<<< HEAD
-
-=======
-from stable_baselines3.common.policies import ActorCriticPolicy
->>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
-
-
 #-->PYTORCH
 import torch as th
 
@@ -65,7 +58,6 @@ def signal_handler(sig, frame):
     
 #recebe o sinal ctrl c chama função para fechar tudo          
 signal.signal(signal.SIGINT, signal_handler)
-
 
 
 def truncate(value):
@@ -172,48 +164,41 @@ def actionRescale(action):
     raction[0] = action[0] * 5.0
     #--> Boom angle [0, 90]
     raction[1] = (action[1] + 1) * 45.0
-    #--> Rudder angle [-60, 60 ]
+    #--> Rudder angle [-60, 60]
     raction[2] = action[2] * 60.0
     return raction
 
 def runTrainingv0(env, logdir, sufix="model1"):
     policy_kwargs = dict(activation_fn=th.nn.ReLU,
-                         net_arch=[(dict(pi=[32, 32, 32], vf=[32, 32]))]
+                         net_arch=[dict(pi=[32, 32], vf=[32, 32])]
                          )
-
+    print("##### entrou no runtraining0 ######")
     model, models_dir, TB_LOG_NAME = runPPO(policy          = "MlpPolicy",
                                             env             = env,
                                             tensorboard_log = logdir,
-<<<<<<< HEAD
                                             ent_coef        = 0.001,
                                             verbose         = 0,
                                             policy_kwargs   = policy_kwargs,
                                             sufix           = sufix)
-
-    SAVESTEPS = 100+1
-=======
-                                            ent_coef        = 0.00000000001,
-                                            verbose         = 0,
-                                            policy_kwargs   = policy_kwargs,
-                                            sufix           = sufix)
     print("##### saiu do runPPo ######")
-    SAVESTEPS = 50+1
->>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
-    TIMESTEPS = 2048*5
+    # SAVESTEPS = 100+1
+    # TIMESTEPS = 2048*5
+    SAVESTEPS = 10
+    TIMESTEPS = 200
     start     = time.time()
     model.save(f"{models_dir}/eboat_ocean_0")
     for i in range(1, SAVESTEPS):
         print("\n\n---------------------------------------------------------")
         print(f"iteration                   : {i}")
         timeA = time.time()
-
+        print(f"TIMESTEPS                   : {TIMESTEPS}")
         model.learn(total_timesteps     = TIMESTEPS  ,
                     log_interval        = 1          ,
                     tb_log_name         = TB_LOG_NAME,
-                    reset_num_timesteps = False
-                    )
+                    reset_num_timesteps = False     
+                    )        
+        print("#### saiu do learn ###")
         model.save(f"{models_dir}/eboat_ocean_{i}")
-
         timeB  = time.time()
         avtime = (timeB - start) / i
         print(f"Time spent in this iteration: {htime(timeB - timeA)}")
@@ -275,12 +260,10 @@ def main():
         env = gym.make('GazeboOceanEboatEnvCC-v2')
         runTrainingv2(env, logdir)
 
-    print("---------------- FIM ----------------------------------\n")
+    print("---------------------------------------------------------\n")
 
     env.close()
     os.system('/eboat_ws/kill_gaz.sh')
-    # os.system("killall -9 gazebo gzserver gzclient rosmaster rosout")
-    # os.system("shutdown now")
 
 def runModel():
     apwindstr = ["from stern (vento de popa)",
