@@ -172,7 +172,7 @@ def actionRescale(action):
     raction[0] = action[0] * 5.0
     #--> Boom angle [0, 90]
     raction[1] = (action[1] + 1) * 45.0
-    #--> Rudder angle [-60, 60]
+    #--> Rudder angle [-60, 60 ]
     raction[2] = action[2] * 60.0
     return raction
 
