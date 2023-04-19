@@ -178,11 +178,7 @@ def actionRescale(action):
 
 def runTrainingv0(env, logdir, sufix="model1"):
     policy_kwargs = dict(activation_fn=th.nn.ReLU,
-<<<<<<< HEAD
                          net_arch=[(dict(pi=[32, 32, 32], vf=[32, 32]))]
-=======
-                         net_arch=[(dict(pi=[32, 32], vf=[32, 32]))]
->>>>>>> 0da26cf6bd4fca0933aeca5dd573101db1fcb059
                          )
 
     model, models_dir, TB_LOG_NAME = runPPO(policy          = "MlpPolicy",
