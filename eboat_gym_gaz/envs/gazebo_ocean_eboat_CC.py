@@ -608,18 +608,23 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         #--> Reward;Penalty by decresing/increasing the distance from the goal.
         progre = (self.DPREV - obs[0]) / self.DMAX
         reward = progre 
-        min_speed = 1 #m/s 
+        min_speed = ((self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5) / 3 # barco tem que andar a 1/3 da velocidade do vento 
+        min_speed = 0.4
 
         if obs[2] < min_speed: # o barco esta se movendo devagar
             reward = np.min([-2.0*reward, -0.3])
-            if obs[2] < 0:
-                reward =-10
+            # if obs[2] < 0:
+            #     reward =-1
         else:
             if 60 <= obs[1] <= 60:
                 reward *= 2.0
 
-            if obs[7] != 0: #ligou motor
-                reward -= reward + abs(progre)
+            # if obs[7] != 0: #ligou motor
+            #     reward -= reward + abs(progre)
+
+        # --> obsData = [distance, trajectory angle, linear velocity, aparent wind speed, aparent wind angle, boom angle, rudder angle, eletric propultion speed, roll angle]
+        #               [   0    ,        1        ,       2        ,         3         ,         4         ,     5     ,      6      ,            7            ,     8     ]
+            
 
         return reward
 
@@ -678,17 +683,19 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
             if (self.DPREV <= self.min_dist_goal): #chegou no objetivo
                 reward = 1
                 print("=====================================================!!!! DONE !!!!  Reward: ", self.reward_global)
-                if  self.current_iteration_time <= self.min_iteration_time: #chegou mais rapido
-                    self.min_iteration_time =  self.current_iteration_time
-                    print("!!!!!!!!!!!!!!!!!!!!!!##########!!!!!!!!!!!!!!!!!!!!!!!!  min_iteration_time: ", self.min_iteration_time)
-                    reward = 10 #super recompensa    
-                    print("!!!! DONE !!!!  Super Reward: ", self.reward_global)
+                # if  self.current_iteration_time <= self.min_iteration_time: #chegou mais rapido
+                #     self.min_iteration_time =  self.current_iteration_time
+                #     print("!!!!!!!!!!!!!!!!!!!!!!##########!!!!!!!!!!!!!!!!!!!!!!!!  min_iteration_time: ", self.min_iteration_time)
+                #     reward = 10 #super recompensa    
+                #     print("!!!! DONE !!!!  Super Reward: ", self.reward_global)
             else: 
                 reward = -1
+        
+        # print("Reward:", reward)
 
         
         self.reward_global = self.reward_global + reward
-
+        
         return self.observationRescale(observations), reward, done, {}
    
     def reset(self):

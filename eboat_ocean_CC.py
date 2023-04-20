@@ -181,10 +181,8 @@ def runTrainingv0(env, logdir, sufix="model1"):
                                             policy_kwargs   = policy_kwargs,
                                             sufix           = sufix)
     print("##### saiu do runPPo ######")
-    # SAVESTEPS = 100+1
-    # TIMESTEPS = 2048*5
     SAVESTEPS = 10
-    TIMESTEPS = 200
+    TIMESTEPS = 100000
     start     = time.time()
     model.save(f"{models_dir}/eboat_ocean_0")
     for i in range(1, SAVESTEPS):

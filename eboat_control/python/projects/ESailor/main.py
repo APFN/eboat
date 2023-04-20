@@ -64,7 +64,7 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_19042023_05_41_51/eboat_ocean_100.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_19042023_19_08_53/eboat_ocean_70.zip")
     
 
     # navpath = [[0.0, 100.0, 0.5],
@@ -151,7 +151,7 @@ def main():
             print(("/gazebo/unpause_physics service call failed!"))
 
         #-->COLLECT OBSERVATIONS
-        observations = getObservations()[:5]
+        observations = getObservations()[:9]
 
         print("--------------------------------------------------")
         while observations[0] > 10: #waipoint alcançado há 10m de distancia do barco
@@ -160,7 +160,8 @@ def main():
             obs = observationRescale(observations)
 
             #-->PREDICT ACTIONS
-            actions = actionRescale(model.predict(obs)[0])
+            predict  =  model.predict(obs)
+            actions = actionRescale(predict[0])
             #actions[0] = np.floor(actions[0])
             # imprimi opbservações e achoes do modelo
             print(f"{vet2str(observations)} --> {vet2str(actions)}")
@@ -172,7 +173,7 @@ def main():
             rudderAng_pub.publish(actions[1])
 
             # -->COLLECT OBSERVATIONS
-            observations = getObservations()[:5] 
+            observations = getObservations()[:9] 
         
         # -->PAUSE SIMULATION
         rospy.wait_for_service("/gazebo/pause_physics")
@@ -244,17 +245,27 @@ def getObservations():
     return np.array(obsData, dtype=float)
 
 def observationRescale(observations):
-    robs = np.zeros(5, dtype = np.float32)
-    #--> Distance from the waypoint (m) [0   , 200];
+    lobs = len(observations)
+    robs = np.zeros(lobs, dtype=np.float32)
+    # --> Distance from the waypoint (m) [0   , DMAX];
     robs[0] = observations[0]/100 - 1
-    #--> Trajectory angle               [-180, 180];
+    # --> Trajectory angle               [-180, 180]
     robs[1] = observations[1] / 180.0
-    #--> Boat linear velocity (m/s)     [0   , 10 ];
-    robs[2] = observations[2]/5 - 1
-    #--> Aparent wind speed (m/s)       [0   , 30];
-    robs[3] = observations[3]/15 - 1
-    #--> Apparent wind angle            [-180, 180]
+    # --> Boat linear velocity (m/s)     [0   , 10 ]
+    robs[2] = observations[2] / 5 - 1
+    # --> Aparent wind speed (m/s)       [0   , 30]
+    robs[3] = observations[3] / 15 - 1
+    # --> Apparent wind angle            [-180, 180]
     robs[4] = observations[4] / 180.0
+    if lobs > 5:
+        # --> Boom angle                     [0   , 90]
+        robs[5] = (observations[5] / 45.0) - 1
+        # --> Rudder angle                   [-60 , 60 ]
+        robs[6] = observations[6] / 60.0
+        # --> Electric propulsion speed      [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
+        robs[7] = observations[7] / 5.0
+        # --> Roll angle                     [-180, 180]
+        robs[8] = observations[8] / 180.0
 
     return robs
 
