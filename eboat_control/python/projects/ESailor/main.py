@@ -64,7 +64,7 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_19042023_19_08_53/eboat_ocean_70.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_20042023_20_43_43/eboat_ocean_6.zip")
     
 
     # navpath = [[0.0, 100.0, 0.5],
@@ -114,7 +114,7 @@ def main():
     except (rospy.ServiceException) as e:
         print(("/gazebo/reset_simulation service call failed!"))
     propVel_pub.publish(0)
-    boomAng_pub.publish(0.0)
+    boomAng_pub.publish(90.0)
     rudderAng_pub.publish(0.0)
 
     pc = PlotCoordinates() # Cria uma instância da classe PlotCoordinates para plotar ao final
@@ -163,14 +163,15 @@ def main():
             predict  =  model.predict(obs)
             actions = actionRescale(predict[0])
             #actions[0] = np.floor(actions[0])
-            # imprimi opbservações e achoes do modelo
-            print(f"{vet2str(observations)} --> {vet2str(actions)}")
 
             #-->SEND ACTIONS TO THE CONTROL INTERFACE
             #propVel_pub.publish(int(actions[0])) #com motor
             # propVel_pub.publish(int(0)) #sem motor
             boomAng_pub.publish(actions[0])
             rudderAng_pub.publish(actions[1])
+
+            # imprimi opbservações e achoes do modelo
+            print(f"{vet2str(observations)} --> {vet2str(actions)}")
 
             # -->COLLECT OBSERVATIONS
             observations = getObservations()[:9] 
@@ -187,7 +188,7 @@ def main():
 
 
     propVel_pub.publish(0)
-    boomAng_pub.publish(0.0)
+    boomAng_pub.publish(90.0)
     rudderAng_pub.publish(0.0)
     pc.plot_coordinates() # Chama o método save_coordinates da instância pc
 

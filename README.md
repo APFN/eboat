@@ -121,3 +121,18 @@ This project contains some gym environments predifined. You can use them or crea
 
 \\
 \* The original YML file will install tensorflow-gpu and pythorch-gpu. In case you do not have a compatible GPU available, remove tensorflow-gpu and pythorch-gpu from the YML file.
+
+
+---
+
+\\
+Frequently used commands:
+
+Closes everything:
+
+> $ ``` sudo killall -9 gazebo gzserver gzclient python rosmaster rosout```
+
+Open Tensorboard:
+
+> $ ``` cd ~/eboat_ws/src/eboat_gz_1```
+> $ ``` tensorboard --logdir logs```

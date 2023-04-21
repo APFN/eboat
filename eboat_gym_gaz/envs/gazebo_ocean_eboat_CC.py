@@ -469,7 +469,8 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         self.set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
 
         rospy.Subscriber('/clock', Clock, self.clock_callback)
-        self.min_iteration_time = rospy.Time.from_sec(10*60*60) 
+        self.min_iteration_time = [rospy.Time.from_sec(10*60*60)] * 12
+
 
         # --> GLOBAL VARIABLES
         self.DTOL = 25.0  # --> Threshold for distance. If the boat goes far than INITIAL POSITION + DMAX, a done signal is trigged.
@@ -564,8 +565,8 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         y = magnitude * math.sin(angle)
         self.windSpeed[:2] = [x,y]
         
-        if np.random.uniform() < 0.1: # 30% das vezes é vento contra. "na cara"
-            self.windSpeed[:2] = [(magnitude*-1), 0]
+        # if np.random.uniform() < 0.1: # 30% das vezes é vento contra. "na cara"
+        #     self.windSpeed[:2] = [(magnitude*-1), 0]
         #print(self.windSpeed)
 
     def setWindSpeed(self, vector):
@@ -606,26 +607,26 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
 
     def rewardFunction(self, obs, ract):
         #--> Reward;Penalty by decresing/increasing the distance from the goal.
-        progre = (self.DPREV - obs[0]) / self.DMAX
-        reward = progre 
-        min_speed = ((self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5) / 3 # barco tem que andar a 1/3 da velocidade do vento 
-        min_speed = 0.4
+        # progre = (self.DPREV - obs[0]) / self.DMAX
+        # reward = progre 
+        # # min_speed = ((self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5) / 3 # barco tem que andar a 1/3 da velocidade do vento 
+        # min_speed = 0.4
 
-        if obs[2] < min_speed: # o barco esta se movendo devagar
-            reward = np.min([-2.0*reward, -0.3])
-            # if obs[2] < 0:
-            #     reward =-1
-        else:
-            if 60 <= obs[1] <= 60:
-                reward *= 2.0
+        # if obs[2] < min_speed: # o barco esta se movendo devagar
+        #     reward = np.min([-2.0*reward, -0.3])
+        #     # if obs[2] < 0:
+        #     #     reward =-1
+        # else:
+        #     if 60 <= obs[1] <= 60:
+        #         reward *= 2.0
+        
+        reward = (self.DPREV - obs[0]) / self.DMAX
+        if reward > 0 :
+            reward = 0            
 
-            # if obs[7] != 0: #ligou motor
-            #     reward -= reward + abs(progre)
 
         # --> obsData = [distance, trajectory angle, linear velocity, aparent wind speed, aparent wind angle, boom angle, rudder angle, eletric propultion speed, roll angle]
-        #               [   0    ,        1        ,       2        ,         3         ,         4         ,     5     ,      6      ,            7            ,     8     ]
-            
-
+        #               [   0    ,        1        ,       2        ,         3         ,         4         ,     5     ,      6      ,            7            ,     8     ]     
         return reward
 
     def step(self, action):
@@ -678,16 +679,18 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
                     (np.isnan(observations).any()) # erro nas observaçoes
                     )                  
 
+        wind_slot = ((self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5)
+        wind_slot = math.floor(wind_slot)
         ########## COMPUTES THE REWARD  #############
         if done :
             if (self.DPREV <= self.min_dist_goal): #chegou no objetivo
                 reward = 1
                 print("=====================================================!!!! DONE !!!!  Reward: ", self.reward_global)
-                # if  self.current_iteration_time <= self.min_iteration_time: #chegou mais rapido
-                #     self.min_iteration_time =  self.current_iteration_time
-                #     print("!!!!!!!!!!!!!!!!!!!!!!##########!!!!!!!!!!!!!!!!!!!!!!!!  min_iteration_time: ", self.min_iteration_time)
-                #     reward = 10 #super recompensa    
-                #     print("!!!! DONE !!!!  Super Reward: ", self.reward_global)
+                if  self.current_iteration_time <= self.min_iteration_time[wind_slot]: #chegou mais rapido
+                    self.min_iteration_time[wind_slot] =  self.current_iteration_time
+                    print("!!!!!!!!!!!!!!!!!!!!!!##########!!!!!!!!!!!!!!!!!!!!!!!!  Windslot: min_iteration_time: ", wind_slot, self.min_iteration_time[wind_slot])
+                    reward = 10 #super recompensa    
+                    print("!!!! DONE !!!!  Super Reward: ", self.reward_global)
             else: 
                 reward = -1
         

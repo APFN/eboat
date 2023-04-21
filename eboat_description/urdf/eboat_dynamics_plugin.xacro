@@ -17,14 +17,16 @@
         <nDotR>0.0</nDotR>
         <!-- Linear and quadratic drag -->
         <xU>5</xU>
-        <xUU>7.4</xUU>
-        <yV>80.0</yV>
-        <yVV>160.0</yVV>
-        <zW>500.0</zW>
+         <!-- Linear and quadratic drag -->
+        <xU>${0.2 * 51.3}</xU>
+        <xUU>${0.2 * 72.4}</xUU>
+        <yV>${0.2 * 80.0}</yV>
+        <yVV>${0.2 * 1600.0}</yVV>
+        <zW>${0.5 * 500.0}</zW>
         <zWW>0.0</zWW>
-        <kP>5.0</kP>
-        <mQ>5.0</mQ>
-        <nR>40.0</nR>
+        <kP>${0.5 * 50.0}</kP>
+        <mQ>${0.5 * 50.0}</mQ>
+        <nR>${0.2 * 400.0}</nR>
         <nRR>0.0</nRR>
         <!--<xU>40.0</xU>
         <xUU>80.0</xUU>
