@@ -454,6 +454,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         self.start_time = rospy.Time.from_sec(0)
         self.turning = False
         self.min_dist_goal = 5
+        self.lowsSpeedCount = 0
 
         self.EBOAT_HOME = "/home/alvaro/eboat_ws/src/eboat_gz_1"
         gazebo_env.GazeboEnv.__init__(self, os.path.join(self.EBOAT_HOME, "eboat_gazebo/launch/ocean.launch"))
@@ -673,9 +674,16 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         reward  = self.rewardFunction(observations, ract)
         self.DPREV = dist #atualiza distancia do objetivo
 
+        min_speed = ((self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5) / 7 # barco tem que andar a 1/4 da velocidade do vento 
+        if observations[2] < min_speed:  # lento de mais
+            self.lowsSpeedCount += 1
+        else:
+            self.lowsSpeedCount = 0
+
          #-->CHECK FOR A TERMINAL STATE
         done = bool((self.DPREV <= self.min_dist_goal) | # chegou no objetivo
                     (self.DPREV > self.DMAX) |  # esta muito longe do objetivo
+                    (self.lowsSpeedCount > 20) |  # lento de mais
                     (np.isnan(observations).any()) # erro nas observaçoes
                     )                  
 
@@ -683,18 +691,23 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         wind_slot = math.floor(wind_slot)
         ########## COMPUTES THE REWARD  #############
         if done :
-            if (self.DPREV <= self.min_dist_goal): #chegou no objetivo
-                reward = 1
-                print("=====================================================!!!! DONE !!!!  Reward: ", self.reward_global)
+            if (self.DPREV <= self.min_dist_goal): #chegou no objetivo                
                 if  self.current_iteration_time <= self.min_iteration_time[wind_slot]: #chegou mais rapido
                     self.min_iteration_time[wind_slot] =  self.current_iteration_time
-                    print("!!!!!!!!!!!!!!!!!!!!!!##########!!!!!!!!!!!!!!!!!!!!!!!!  Windslot: min_iteration_time: ", wind_slot, self.min_iteration_time[wind_slot])
-                    reward = 10 #super recompensa    
-                    print("!!!! DONE !!!!  Super Reward: ", self.reward_global)
+                    print("=======!!!! DONE !!!!  Super Reward: ", self.reward_global)
+                    print("=======Windslot: min_iteration_time: ", wind_slot, self.min_iteration_time[wind_slot])
+                    reward = 10 #super recompensa  
+                else: 
+                    print("!!!! DONE !!!!  Reward: ", self.reward_global)
+                    reward = 1
+                    
+
+            if self.lowsSpeedCount > 20:  # lento de mais
+                reward = 0
+                print("######## Resetou, muito lento. Vel e min_speed", observations[2], min_speed)  
+                
             else: 
                 reward = -1
-        
-        # print("Reward:", reward)
 
         
         self.reward_global = self.reward_global + reward
