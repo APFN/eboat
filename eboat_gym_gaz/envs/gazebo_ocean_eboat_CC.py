@@ -622,9 +622,10 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         #         reward *= 2.0
 
         
-        reward = ((self.DPREV - obs[0]) / self.DMAX) 
-        if reward > 0:
-            reward *= 0.1
+        reward = ((self.DPREV - obs[0]) / self.DMAX)         
+        min_speed =  obs[3] / 4 # barco tem que andar a 1/4 da velocidade do vento         
+        if obs[2] > min_speed:  # rapido
+            reward *=2
 
 
 
@@ -676,17 +677,9 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         reward  = self.rewardFunction(observations, ract)
         self.DPREV = dist #atualiza distancia do objetivo
 
-        min_speed =  observations[3] / 4 # barco tem que andar a 1/4 da velocidade do vento 
-        
-        if observations[2] < min_speed:  # lento de mais
-            self.lowsSpeedCount += 1
-        else:
-            self.lowsSpeedCount = 0
-
          #-->CHECK FOR A TERMINAL STATE
         done = bool((self.DPREV <= self.min_dist_goal) | # chegou no objetivo
                     (self.DPREV > self.DMAX) |  # esta muito longe do objetivo
-                    (self.lowsSpeedCount > 10) |  # lento de mais
                     (np.isnan(observations).any()) # erro nas observaçoes
                     )                  
 
@@ -697,18 +690,12 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
             if (self.DPREV <= self.min_dist_goal): #chegou no objetivo                
                 if  self.current_iteration_time <= self.min_iteration_time[wind_slot]: #chegou mais rapido
                     self.min_iteration_time[wind_slot] =  self.current_iteration_time
+                    reward = 10 #super recompensa  
                     print("=======!!!! DONE !!!!  Super Reward: ", self.reward_global)
                     print("=======Windslot: min_iteration_time: ", wind_slot, self.min_iteration_time[wind_slot])
-                    reward = 10 #super recompensa  
                 else: 
-                    print("!!!! DONE !!!!  Reward: ", self.reward_global)
-                    reward = 1
-                    
-
-            if self.lowsSpeedCount > 10:  # lento de mais
-                reward = -1
-                #print("######## Resetou, muito lento. Vel,  min_speed, mag_vento", observations[2], min_speed, mag_vento)  
-                
+                    reward = 1       
+                    print("!!!! DONE !!!!  Reward: ", self.reward_global)         
             else: 
                 reward = -1
 
@@ -747,10 +734,6 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
 
         # -->RESET INITIAL DISTANCE
         self.DPREV = observations[0]
-        # self.DMAX  = observations[0] + self.DTOL
-        # self.D0 = observations[0]
-
-        self.lowsSpeedCount = 0
 
         #-->PAUSE SIMULATION
         rospy.wait_for_service("/gazebo/pause_physics")
@@ -761,7 +744,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
                
         
         if np.random.uniform() < 0.1: 
-            print("Reward global:", self.reward_global)
+            print("Global Reward :", self.reward_global)
 
         return self.observationRescale(observations)
 
