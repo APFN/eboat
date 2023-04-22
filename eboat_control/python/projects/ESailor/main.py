@@ -64,7 +64,7 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_21042023_17_28_39/eboat_ocean_4.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_22042023_13_27_18/eboat_ocean_9.zip")
     
 
     # navpath = [[0.0, 100.0, 0.5],
