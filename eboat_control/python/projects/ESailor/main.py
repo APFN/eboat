@@ -31,7 +31,7 @@ def wind_callback(data):
     theta = np.arctan2(wind_x, wind_y)
     axis = np.array([1, 0, 0])
     # criação do quaternion
-    wind_quaternion = axangle2quat(axis, theta)
+    wind_quaternion = axangle2quat(axis, -theta)
     model_state.pose.orientation.x = wind_quaternion[0]
     model_state.pose.orientation.y = wind_quaternion[1]
     model_state.pose.orientation.z = wind_quaternion[2]
@@ -64,7 +64,7 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_20042023_20_43_43/eboat_ocean_6.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_21042023_17_28_39/eboat_ocean_4.zip")
     
 
     # navpath = [[0.0, 100.0, 0.5],

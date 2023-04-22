@@ -470,7 +470,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         self.set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
 
         rospy.Subscriber('/clock', Clock, self.clock_callback)
-        self.min_iteration_time = [rospy.Time.from_sec(10*60*60)] * 12
+        self.min_iteration_time = [rospy.Time.from_sec(10*60*60)] * 20
 
 
         # --> GLOBAL VARIABLES
@@ -620,10 +620,12 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         # else:
         #     if 60 <= obs[1] <= 60:
         #         reward *= 2.0
+
         
-        reward = (self.DPREV - obs[0]) / self.DMAX
-        if reward > 0 :
-            reward = 0            
+        reward = ((self.DPREV - obs[0]) / self.DMAX) 
+        if reward > 0:
+            reward *= 0.1
+
 
 
         # --> obsData = [distance, trajectory angle, linear velocity, aparent wind speed, aparent wind angle, boom angle, rudder angle, eletric propultion speed, roll angle]
@@ -674,7 +676,8 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         reward  = self.rewardFunction(observations, ract)
         self.DPREV = dist #atualiza distancia do objetivo
 
-        min_speed = ((self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5) / 7 # barco tem que andar a 1/4 da velocidade do vento 
+        min_speed =  observations[3] / 4 # barco tem que andar a 1/4 da velocidade do vento 
+        
         if observations[2] < min_speed:  # lento de mais
             self.lowsSpeedCount += 1
         else:
@@ -683,12 +686,12 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
          #-->CHECK FOR A TERMINAL STATE
         done = bool((self.DPREV <= self.min_dist_goal) | # chegou no objetivo
                     (self.DPREV > self.DMAX) |  # esta muito longe do objetivo
-                    (self.lowsSpeedCount > 20) |  # lento de mais
+                    (self.lowsSpeedCount > 10) |  # lento de mais
                     (np.isnan(observations).any()) # erro nas observaçoes
                     )                  
 
-        wind_slot = ((self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5)
-        wind_slot = math.floor(wind_slot)
+        
+        wind_slot = math.floor(observations[3])
         ########## COMPUTES THE REWARD  #############
         if done :
             if (self.DPREV <= self.min_dist_goal): #chegou no objetivo                
@@ -702,9 +705,9 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
                     reward = 1
                     
 
-            if self.lowsSpeedCount > 20:  # lento de mais
-                reward = 0
-                print("######## Resetou, muito lento. Vel e min_speed", observations[2], min_speed)  
+            if self.lowsSpeedCount > 10:  # lento de mais
+                reward = -1
+                #print("######## Resetou, muito lento. Vel,  min_speed, mag_vento", observations[2], min_speed, mag_vento)  
                 
             else: 
                 reward = -1
@@ -746,6 +749,8 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         self.DPREV = observations[0]
         # self.DMAX  = observations[0] + self.DTOL
         # self.D0 = observations[0]
+
+        self.lowsSpeedCount = 0
 
         #-->PAUSE SIMULATION
         rospy.wait_for_service("/gazebo/pause_physics")
