@@ -158,11 +158,10 @@ def main():
         
 
         print("--------------------------------------------------")
-        while observations[0] > 10: #waipoint alcançado há 10m de distancia do barco
+        while observations[0] > 15: #waipoint alcançado há 10m de distancia do barco
             
             
             flappy_boat_pub.publish(True)
-            time.sleep(1)
 
             pc.save_eboat_coordinates() # Chama o método save_coordinates da instância pc
 

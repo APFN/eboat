@@ -211,21 +211,36 @@ void SailControllerPlugin::OnUpdate()
 void SailControllerPlugin:: SailJointThreadFunction(SailControllerPlugin* self)
 {
     //mutex.lock();
-    for (int angle = 0; angle < 90; angle++) {
+    for (int angle = 0; angle <= 90; angle+=2) {
         //std::cout<<"Entrou for 1 "<<std::endl;
         float i = angle* M_PI / 180.0;
         self->sailJoint->SetUpperLimit(0,i);
-        self->sailJoint->SetLowerLimit(0,i);
-        std::this_thread::sleep_for(std::chrono::microseconds(4000));
+        self->sailJoint->SetLowerLimit(0,i);        
+        ros::Duration(0, 4000).sleep();;
         //std::cout<<"saiu for 1 "<<std::endl; 
     }
     //std::cout<<"Fim for 1 "<<std::endl; 
-    for (int angle = 90; angle >= 0; angle--) {
+    for (int angle = 90; angle >= 0; angle-=15) {
         //std::cout<<"Entrou for 2 "<<std::endl;
         float i = angle* M_PI / 180.0;
         self->sailJoint->SetUpperLimit(0,i);
-        self->sailJoint->SetLowerLimit(0,i);
-        std::this_thread::sleep_for(std::chrono::microseconds(600));
+        self->sailJoint->SetLowerLimit(0,i);        
+        ros::Duration(0, 400).sleep();
+    }
+    for (int angle = 0; angle >= -90; angle-=2) {
+        //std::cout<<"Entrou for 2 "<<std::endl;
+        float i = angle* M_PI / 180.0;
+        self->sailJoint->SetUpperLimit(0,i);
+        self->sailJoint->SetLowerLimit(0,i);        
+        ros::Duration(0, 400).sleep();
+    }
+    for (int angle = -90; angle <= 0; angle+=+15) {
+        //std::cout<<"Entrou for 1 "<<std::endl;
+        float i = angle* M_PI / 180.0;
+        self->sailJoint->SetUpperLimit(0,i);
+        self->sailJoint->SetLowerLimit(0,i);        
+        ros::Duration(0, 4000).sleep();;
+        //std::cout<<"saiu for 1 "<<std::endl; 
     }
     std::cout<<"Fim flappyBoat "<<std::endl; 
     self->flappyBoat = false;
