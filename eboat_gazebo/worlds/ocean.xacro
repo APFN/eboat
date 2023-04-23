@@ -5,15 +5,15 @@
 	<xacro:macro name="ocean">
 
         <!--<pose>5 50 140 0 1.55 0</pose>--> <!--Treinamento-->
-        <gui fullscreen='0'>
+        <!-- <gui fullscreen='0'>
             <camera name='user_camera'>                
                 <pose>0 0 300 0 1.55 0</pose>
                 <view_controller>orbit</view_controller>
             </camera>
-        </gui>
+        </gui> -->
 
         <!-- <pose>85 125 5.45 0 0.48 -1.07</pose> -->
-        <!-- <gui fullscreen='0'>
+        <gui fullscreen='0'>
             <camera name='user_camera'>
                  <track_visual>
                     <name>eboat</name>
@@ -24,7 +24,7 @@
                     <inherit_yaw>true</inherit_yaw>
                 </track_visual>
             </camera>
-        </gui> -->
+        </gui>
 
         <scene>
 			<sky>
@@ -101,9 +101,9 @@
         <!-- Usar em modo de treinamento ??? Plugin to control atmosferic physics-->
         <plugin name="atmosferic_control" filename="libAtmosfericControlPlugin.so"/>
 
-         <!-- Usar em modo de main-->
+         <!-- <linear_velocity>0.0 -10.0 0.0</linear_velocity>  -->
         <wind>
-            <linear_velocity>0.0 -10.0 0.0</linear_velocity>
+            <linear_velocity>0.0 0.0 0.0</linear_velocity> 
             <angular_velocity>0.0 0.0 0.0</angular_velocity>
         </wind>
 

@@ -17,6 +17,11 @@
 #include "ros/callback_queue.h"
 #include "ros/subscribe_options.h"
 #include "std_msgs/Float32.h"
+#include <std_msgs/Bool.h>
+
+
+
+
 
 
 namespace gazebo
@@ -62,6 +67,14 @@ namespace gazebo
         /// \brief Boom eletric engine pull/release velocity
         protected: double boomEngVel;
 
+        /// \brief A boolean variable to be used in the OnUpdate function
+        protected: bool flappyBoat;
+
+        /// \brief A boolean variable to be used in the OnUpdate function
+        protected: bool thread_running;
+
+        static void SailJointThreadFunction(SailControllerPlugin* self);
+
         /// \brief Constant to transform degree to rad
         private: double d2r;
 
@@ -77,6 +90,9 @@ namespace gazebo
         /// \brief A thread the keeps running the rosQueue
         private: std::thread rosQueueThread;
 
+        private: std::thread sailJointThread;
+
+
         //////////////////////////////////////////////////////////////////////
         /// \brief Handle an incoming message from ROS
         /// \param[in] _msg A float value that is used to set the velocity
@@ -86,6 +102,7 @@ namespace gazebo
             this->sailPosition = _msg->data * M_PI / 180.0;
             //std::cout<<"Ângulo da retranca: "<<_msg->data<<std::endl;
         }
+        public: void OnFlappyBoatMsg(const std_msgs::BoolConstPtr& _msg);
 
         /// \brief ROS helper function that processes messages
         private: void QueueThread()

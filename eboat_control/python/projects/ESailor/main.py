@@ -2,7 +2,7 @@ import numpy as np
 import rospy
 import time
 
-from std_msgs.msg import Float32, Int16, Float32MultiArray
+from std_msgs.msg import Float32, Int16, Float32MultiArray, Bool
 from geometry_msgs.msg import Point
 from std_srvs.srv import Empty
 
@@ -50,6 +50,8 @@ def main():
     rudderAng_pub = rospy.Publisher("/eboat/control_interface/rudder"     , Float32, queue_size=5)
     propVel_pub   = rospy.Publisher("/eboat/control_interface/propulsion", Int16  , queue_size=5)
     wind_pub      = rospy.Publisher("/eboat/atmosferic_control/wind"      , Float32MultiArray  , queue_size=5)
+    flappy_boat_pub = rospy.Publisher('/eboat/control_interface/flappy_boat', Bool, queue_size=10)
+
     
     #-->ROS SERVICES
     unpause       = rospy.ServiceProxy('/gazebo/unpause_physics' , Empty)
@@ -153,8 +155,15 @@ def main():
         #-->COLLECT OBSERVATIONS
         observations = getObservations()[:9]
 
+        
+
         print("--------------------------------------------------")
         while observations[0] > 10: #waipoint alcançado há 10m de distancia do barco
+            
+            
+            flappy_boat_pub.publish(True)
+            time.sleep(1)
+
             pc.save_eboat_coordinates() # Chama o método save_coordinates da instância pc
 
             obs = observationRescale(observations)
@@ -167,7 +176,7 @@ def main():
             #-->SEND ACTIONS TO THE CONTROL INTERFACE
             #propVel_pub.publish(int(actions[0])) #com motor
             # propVel_pub.publish(int(0)) #sem motor
-            boomAng_pub.publish(actions[0])
+            #boomAng_pub.publish(actions[0])
             rudderAng_pub.publish(actions[1])
 
             # imprimi opbservações e achoes do modelo
@@ -175,6 +184,7 @@ def main():
 
             # -->COLLECT OBSERVATIONS
             observations = getObservations()[:9] 
+            
         
         # -->PAUSE SIMULATION
         rospy.wait_for_service("/gazebo/pause_physics")

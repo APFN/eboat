@@ -9,7 +9,7 @@ from gym import utils, spaces
 from gym_gazebo.envs import gazebo_env
 from std_srvs.srv import Empty
 
-from std_msgs.msg import Float32, Int16, Float32MultiArray
+from std_msgs.msg import Float32, Int16, Float32MultiArray, Bool
 from geometry_msgs.msg import Point
 from gym.utils import seeding
 
@@ -464,6 +464,8 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         self.propVel_pub = rospy.Publisher("/eboat/control_interface/propulsion", Int16, queue_size=5)
         self.wind_pub = rospy.Publisher("/eboat/atmosferic_control/wind", Point, queue_size=5)
 
+        self.flappy_boat_pub = rospy.Publisher('/eboat/control_interface/flappy_boat', Bool, queue_size=10)
+
         self.unpause = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
         self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
         self.reset_proxy = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
@@ -706,6 +708,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
    
     def reset(self):
         #print("#################### reset no CC1 ###################")
+        self.flappy_boat_pub.publish(True)
         #-->RESETS THE STATE OF THE ENVIRONMENT.
         rospy.wait_for_service('/gazebo/reset_simulation')
         try:
