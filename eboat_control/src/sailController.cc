@@ -44,14 +44,14 @@ SailControllerPlugin::SailControllerPlugin() : sailPosition(0.0), boomEngVel(0.0
 
 void SailControllerPlugin::OnFlappyBoatMsg(const std_msgs::BoolConstPtr& _msg)
 {
-     std::cout<<"msg->data chamada"<<std::endl;
+    //std::cout<<"msg->data chamada"<<std::endl;
     if (mutex.try_lock()) {
-        std::cout<<"msg->data dentro"<<std::endl;
+        //std::cout<<"msg->data dentro"<<std::endl;
         this->flappyBoat = _msg->data;
         mutex.unlock();
-        std::cout<<"msg->data fim"<<std::endl;
+        //std::cout<<"msg->data fim"<<std::endl;
     } else {
-        std::cout<<"Tentou msg ocupado"<<std::endl;
+        //std::cout<<"Tentou msg ocupado"<<std::endl;
     } 
 }
 
@@ -148,13 +148,13 @@ void SailControllerPlugin::OnUpdate()
             std::cout<<"flappyBoat: TRUE "<<std::endl;  
             this->sailJointThread = std::thread(&SailControllerPlugin::SailJointThreadFunction, this);                        
             this->sailJointThread.detach(); 
-            std::cout<<"Saiu thread "<<std::endl;            
+            //std::cout<<"Saiu thread "<<std::endl;            
         } else {
-            std::cout<<"tentou thread ocupado"<<std::endl;
+            //std::cout<<"tentou thread ocupado"<<std::endl;
         } 
     } else {
         if (mutex.try_lock()) {
-            std::cout<<"flappyBoat: false "<<std::endl;
+            //std::cout<<"flappyBoat: false "<<std::endl;
             
             //std::cout<<"flappyBoat: FALSE "<<std::endl;
             ///////////////////////////////////////////////////////////////////////////////
@@ -201,9 +201,9 @@ void SailControllerPlugin::OnUpdate()
                 }
             }
             mutex.unlock(); 
-            std::cout<<"FIm flappyBoat: false "<<std::endl;
+            //std::cout<<"FIm flappyBoat: false "<<std::endl;
         } else {
-            std::cout<<"flappyBoat: false - ocupado"<<std::endl;
+            //std::cout<<"flappyBoat: false - ocupado"<<std::endl;
         }
     }
 }
@@ -216,16 +216,16 @@ void SailControllerPlugin:: SailJointThreadFunction(SailControllerPlugin* self)
         float i = angle* M_PI / 180.0;
         self->sailJoint->SetUpperLimit(0,i);
         self->sailJoint->SetLowerLimit(0,i);
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::microseconds(4000));
         //std::cout<<"saiu for 1 "<<std::endl; 
     }
-    std::cout<<"Fim for 1 "<<std::endl; 
+    //std::cout<<"Fim for 1 "<<std::endl; 
     for (int angle = 90; angle >= 0; angle--) {
         //std::cout<<"Entrou for 2 "<<std::endl;
         float i = angle* M_PI / 180.0;
         self->sailJoint->SetUpperLimit(0,i);
         self->sailJoint->SetLowerLimit(0,i);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::microseconds(600));
     }
     std::cout<<"Fim flappyBoat "<<std::endl; 
     self->flappyBoat = false;
