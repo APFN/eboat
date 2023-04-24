@@ -92,11 +92,11 @@
         </include>-->
 
         <!--Marker to indicate the effort center for the wind forces-->
-        <!-- <include>
+        <include>
             <name>wayPointMarker</name>
             <pose>0 100.0 0 0 0 0</pose>
             <uri>/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_description/models/wayPointMarker</uri>
-        </include> -->
+        </include>
 
         <!-- Usar em modo de treinamento ??? Plugin to control atmosferic physics-->
         <plugin name="atmosferic_control" filename="libAtmosfericControlPlugin.so"/>

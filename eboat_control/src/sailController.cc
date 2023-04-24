@@ -145,7 +145,7 @@ void SailControllerPlugin::OnUpdate()
 {
     if (this->flappyBoat) {
         if (mutex.try_lock()) {
-            std::cout<<"flappyBoat: TRUE "<<std::endl;  
+            //std::cout<<"flappyBoat: TRUE "<<std::endl;  
             this->sailJointThread = std::thread(&SailControllerPlugin::SailJointThreadFunction, this);                        
             this->sailJointThread.detach(); 
             //std::cout<<"Saiu thread "<<std::endl;            
@@ -242,7 +242,7 @@ void SailControllerPlugin:: SailJointThreadFunction(SailControllerPlugin* self)
         ros::Duration(0, 4000).sleep();;
         //std::cout<<"saiu for 1 "<<std::endl; 
     }
-    std::cout<<"Fim flappyBoat "<<std::endl; 
+   //std::cout<<"Fim flappyBoat "<<std::endl; 
     self->flappyBoat = false;
     mutex.unlock(); 
     return;            
