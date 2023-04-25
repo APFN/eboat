@@ -486,7 +486,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         # --> We will use a rescaled action space
         self.action_space = spaces.Box(low=-1,
                                        high=1,
-                                       shape=(1,),
+                                       shape=(3,),
                                        dtype=np.float32)
 
         # --> We will use a rescaled action space
@@ -529,13 +529,13 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         return np.dot(np.array([1, 0], dtype=float) * modulus, R)
     
     def actionRescale(self, action):
-        raction = np.zeros(2, dtype = np.float32)
+        raction = np.zeros(3, dtype = np.float32)
         # # #--> Eletric propulsion [-5, 5]
-        # raction[0] = action[0] * 5.0
+        raction[0] = action[0] * 5.0
         #--> Boom angle [0, 90]
-        # raction[0] = (action[0] + 1) * 45.0
+        raction[1] = (action[1] + 1) * 45.0
         #--> Rudder angle [-60, 60]
-        raction[0] = action[0] * 60.0
+        raction[2] = action[2] * 60.0
         return raction
     
     def observationRescale(self, observations):
@@ -611,28 +611,13 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         self.setInitialState(model_name, theta)
 
     def rewardFunction(self, obs, ract):
-        #--> Reward;Penalty by decresing/increasing the distance from the goal.
-        # progre = (self.DPREV - obs[0]) / self.DMAX
-        # reward = progre 
-        # # min_speed = ((self.windSpeed[0]**2 + self.windSpeed[1]**2)**0.5) / 3 # barco tem que andar a 1/3 da velocidade do vento 
-        # min_speed = 0.4
-
-        # if obs[2] < min_speed: # o barco esta se movendo devagar
-        #     reward = np.min([-2.0*reward, -0.3])
-        #     # if obs[2] < 0:
-        #     #     reward =-1
-        # else:
-        #     if 60 <= obs[1] <= 60:
-        #         reward *= 2.0
-
         
-        reward = ((self.DPREV - obs[0]) / self.DMAX)*100 
-        if  reward> 0:
-            reward*=2       
-        # min_speed =  obs[3] / 4 # barco tem que andar a 1/4 da velocidade do vento         
-        # if obs[2] > min_speed:  # rapido
-        #     reward *=2
-
+        reward = ((self.DPREV - obs[0]) / self.DMAX)         
+        
+        if reward > 0:
+            reward *= (1.0 - 0.9 * abs(obs[7]) / 5.0)
+        else:
+            reward -= 0.01 * abs(obs[7])
 
 
         # --> obsData = [distance, trajectory angle, linear velocity, aparent wind speed, aparent wind angle, boom angle, rudder angle, eletric propultion speed, roll angle]
@@ -649,10 +634,10 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
 
         ract = self.actionRescale(action) #-->SEND ACTION TO THE BOAT CONTROL INTERFACE
 
-        # self.propVel_pub.publish(int(ract[0])) #comentado se motor desligado
-        self.flappy_boat_pub.publish(True)
-        #self.boomAng_pub.publish(ract[0])
-        self.rudderAng_pub.publish(ract[0])
+        self.propVel_pub.publish(int(ract[0])) #comentado se motor desligado        
+        self.boomAng_pub.publish(ract[1])
+        self.rudderAng_pub.publish(ract[2])
+        #self.flappy_boat_pub.publish(True)
         
         #-->GET OBSERVATIONS (NEXT STATE)
         observations = self.getObservations()
@@ -687,7 +672,6 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
          #-->CHECK FOR A TERMINAL STATE
         done = bool((self.DPREV <= self.min_dist_goal) | # chegou no objetivo
                     (self.DPREV > self.DMAX) |  # esta muito longe do objetivo
-                    (self.step_count > 1000) |  # demorou muito
                     (np.isnan(observations).any()) # erro nas observaçoes
                     )                  
 
@@ -726,12 +710,14 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
 
         #-->SET RANDOM INITIAL STATE
         self.sampleInitialState("eboat", self.max_wind_speed)
-        self.wind_pub.publish(Point(0, 0, 0))
+        self.wind_pub.publish(Point(self.windSpeed[0], self.windSpeed[1], self.windSpeed[2]))
+
 
         #-->SET THE ACTUATORS BACK TO THE DEFAULT SETTING
         self.propVel_pub.publish(0)
         self.boomAng_pub.publish(0.0)
         self.rudderAng_pub.publish(0.0)
+        #self.flappy_boat_pub.publish(True)
 
         #-->UNPAUSE SIMULATION TO MAKE OBSERVATION
         rospy.wait_for_service('/gazebo/unpause_physics')

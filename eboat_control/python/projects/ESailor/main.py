@@ -66,7 +66,7 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_22042023_13_27_18/eboat_ocean_9.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_24042023_12_56_49/eboat_ocean_9.zip")
     
 
     # navpath = [[0.0, 100.0, 0.5],
@@ -161,7 +161,7 @@ def main():
         while observations[0] > 15: #waipoint alcançado há 10m de distancia do barco
             
             
-            flappy_boat_pub.publish(True)
+            #flappy_boat_pub.publish(True)
 
             pc.save_eboat_coordinates() # Chama o método save_coordinates da instância pc
 
@@ -170,13 +170,13 @@ def main():
             #-->PREDICT ACTIONS
             predict  =  model.predict(obs)
             actions = actionRescale(predict[0])
-            #actions[0] = np.floor(actions[0])
+            actions[0] = np.floor(actions[0]) #com motor
 
             #-->SEND ACTIONS TO THE CONTROL INTERFACE
-            #propVel_pub.publish(int(actions[0])) #com motor
+            propVel_pub.publish(int(actions[0])) #com motor
             # propVel_pub.publish(int(0)) #sem motor
-            #boomAng_pub.publish(actions[0])
-            rudderAng_pub.publish(actions[1])
+            boomAng_pub.publish(actions[1])
+            rudderAng_pub.publish(actions[2])
 
             # imprimi opbservações e achoes do modelo
             print(f"{vet2str(observations)} --> {vet2str(actions)}")
@@ -280,13 +280,13 @@ def observationRescale(observations):
     return robs
 
 def actionRescale(action):
-    raction = np.zeros(2, dtype = np.float32)
+    raction = np.zeros(3, dtype = np.float32)
     # #--> Eletric propulsion [-5, 5]
-    # raction[0] = action[0] * 5.0
+    raction[0] = action[0] * 5.0
     #--> Boom angle [0, 90]
-    raction[0] = (action[0] + 1) * 45.0
+    raction[1] = (action[1] + 1) * 45.0
     #--> Rudder angle [-60, 60]
-    raction[1] = action[1] * 60.0
+    raction[2] = action[2] * 60.0
     return raction
 
 def vet2str(vet):
