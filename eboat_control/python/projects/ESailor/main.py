@@ -66,7 +66,7 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_24042023_12_56_49/eboat_ocean_9.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_velejando_ok_vento_3_12_SemMotor_22042023_13_27_18/eboat_ocean_9.zip")
     
 
     # navpath = [[0.0, 100.0, 0.5],
@@ -173,10 +173,12 @@ def main():
             actions[0] = np.floor(actions[0]) #com motor
 
             #-->SEND ACTIONS TO THE CONTROL INTERFACE
-            propVel_pub.publish(int(actions[0])) #com motor
-            # propVel_pub.publish(int(0)) #sem motor
-            boomAng_pub.publish(actions[1])
-            rudderAng_pub.publish(actions[2])
+            # propVel_pub.publish(int(actions[0])) #com motor
+            propVel_pub.publish(int(0)) #sem motor
+            print("actions[0]:", actions[0])
+            #boomAng_pub.publish(actions[0])
+            rudderAng_pub.publish(actions[1])
+            #flappy_boat_pub.publish(True)
 
             # imprimi opbservações e achoes do modelo
             print(f"{vet2str(observations)} --> {vet2str(actions)}")
@@ -280,13 +282,24 @@ def observationRescale(observations):
     return robs
 
 def actionRescale(action):
-    raction = np.zeros(3, dtype = np.float32)
-    # #--> Eletric propulsion [-5, 5]
-    raction[0] = action[0] * 5.0
-    #--> Boom angle [0, 90]
-    raction[1] = (action[1] + 1) * 45.0
-    #--> Rudder angle [-60, 60]
-    raction[2] = action[2] * 60.0
+    len_action = len(action)
+    raction = np.zeros(len_action, dtype = np.float32)
+    if len_action == 1:
+        #--> Rudder angle [-60, 60]
+        raction[0] = action[0] * 60.0
+    elif len_action == 2:
+        #--> Boom angle [0, 90]
+        raction[0] = (action[0] + 1) * 45.0
+        #--> Rudder angle [-60, 60]
+        raction[1] = action[1] * 60.0
+    elif len_action == 3:
+        # #--> Eletric propulsion [-5, 5]
+        raction[0] = action[0] * 5.0
+        #--> Boom angle [0, 90]
+        raction[1] = (action[1] + 1) * 45.0
+        #--> Rudder angle [-60, 60]
+        raction[2] = action[2] * 60.0
+
     return raction
 
 def vet2str(vet):

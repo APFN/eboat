@@ -84,6 +84,9 @@ namespace gazebo
         /// \brief A ROS subscriber
         private: ros::Subscriber rosSub;
 
+         /// \brief A ROS subscriber
+        private: ros::Subscriber flappyBoatSub;
+
         /// \brief A ROS callbackqueue that helps process messages
         private: ros::CallbackQueue rosQueue;
 

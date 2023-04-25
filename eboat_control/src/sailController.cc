@@ -121,7 +121,7 @@ void SailControllerPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
             1,
             boost::bind(&SailControllerPlugin::OnFlappyBoatMsg, this, _1),
             ros::VoidPtr(), &this->rosQueue);
-    this->rosSub = this->rosNode->subscribe(flappyBoatSub);
+    this->flappyBoatSub = this->rosNode->subscribe(flappyBoatSub);
 
     // Spin up the queue helper thread.
     this->rosQueueThread =
@@ -145,7 +145,7 @@ void SailControllerPlugin::OnUpdate()
 {
     if (this->flappyBoat) {
         if (mutex.try_lock()) {
-            //std::cout<<"flappyBoat: TRUE "<<std::endl;  
+            std::cout<<"flappyBoat: TRUE "<<std::endl;  
             this->sailJointThread = std::thread(&SailControllerPlugin::SailJointThreadFunction, this);                        
             this->sailJointThread.detach(); 
             //std::cout<<"Saiu thread "<<std::endl;            
@@ -154,8 +154,6 @@ void SailControllerPlugin::OnUpdate()
         } 
     } else {
         if (mutex.try_lock()) {
-            //std::cout<<"flappyBoat: false "<<std::endl;
-            
             //std::cout<<"flappyBoat: FALSE "<<std::endl;
             ///////////////////////////////////////////////////////////////////////////////
             // Controller interface for emulate the real behavior of the boom.
@@ -170,9 +168,11 @@ void SailControllerPlugin::OnUpdate()
             else if (this->sailPosition < -90.0)
                 this->sailPosition == -90.0;
 
+            //std::cout<<"sailPosition: "<<this->sailPosition<<"this->sailJoint->UpperLimit(0): "<<this->sailJoint->UpperLimit(0)<<std::endl;
+
             if (this->sailPosition > this->sailJoint->UpperLimit(0) + this->d2r) //--> in this condition the cable should be released
             {
-                // std::cout<<"flappyBoat: FALSE "<<std::endl;
+                //std::cout<<"flappyBoat: FALSE  - SOLTANDO CABO"<<std::endl;
                 // emulates cable release velocity
                 if ((this->sailJoint->UpperLimit(0) + sov) < this->sailPosition)
                 {
@@ -187,7 +187,7 @@ void SailControllerPlugin::OnUpdate()
             }
             else if (this->sailPosition < this->sailJoint->UpperLimit(0) - this->d2r) //--> in this condition the cable should be pulled
             {
-                
+                //std::cout<<"flappyBoat: FALSE  - CAÇANDO CABO"<<std::endl;
                 // emulates cable pull velocity
                 if ((this->sailJoint->UpperLimit(0) - sov) > this->sailPosition)
                 {
@@ -210,7 +210,6 @@ void SailControllerPlugin::OnUpdate()
 
 void SailControllerPlugin:: SailJointThreadFunction(SailControllerPlugin* self)
 {
-    //mutex.lock();
     for (int angle = 0; angle <= 90; angle+=2) {
         //std::cout<<"Entrou for 1 "<<std::endl;
         float i = angle* M_PI / 180.0;
@@ -242,7 +241,7 @@ void SailControllerPlugin:: SailJointThreadFunction(SailControllerPlugin* self)
         ros::Duration(0, 4000).sleep();;
         //std::cout<<"saiu for 1 "<<std::endl; 
     }
-   //std::cout<<"Fim flappyBoat "<<std::endl; 
+    std::cout<<"Fim flappyBoat "<<std::endl; 
     self->flappyBoat = false;
     mutex.unlock(); 
     return;            

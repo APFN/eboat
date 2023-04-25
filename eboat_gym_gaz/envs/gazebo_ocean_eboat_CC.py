@@ -614,10 +614,10 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         
         reward = ((self.DPREV - obs[0]) / self.DMAX)         
         
-        if reward > 0:
-            reward *= (1.0 - 0.9 * abs(obs[7]) / 5.0)
-        else:
-            reward -= 0.01 * abs(obs[7])
+        # if reward > 0:
+        #     reward *= (1.0 - 0.9 * abs(obs[7]) / 5.0)
+        # else:
+        #     reward -= 0.01 * abs(obs[7])
 
 
         # --> obsData = [distance, trajectory angle, linear velocity, aparent wind speed, aparent wind angle, boom angle, rudder angle, eletric propultion speed, roll angle]
