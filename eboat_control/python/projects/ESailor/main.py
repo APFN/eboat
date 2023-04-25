@@ -66,7 +66,7 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_velejando_ok_vento_3_12_SemMotor_22042023_13_27_18/eboat_ocean_9.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_25042023_13_05_59/eboat_ocean_8.zip")
     
 
     # navpath = [[0.0, 100.0, 0.5],
@@ -173,11 +173,10 @@ def main():
             actions[0] = np.floor(actions[0]) #com motor
 
             #-->SEND ACTIONS TO THE CONTROL INTERFACE
-            # propVel_pub.publish(int(actions[0])) #com motor
-            propVel_pub.publish(int(0)) #sem motor
-            print("actions[0]:", actions[0])
-            #boomAng_pub.publish(actions[0])
-            rudderAng_pub.publish(actions[1])
+            propVel_pub.publish(int(actions[0])) #com motor
+            # propVel_pub.publish(int(0)) #sem motor
+            boomAng_pub.publish(actions[1])
+            rudderAng_pub.publish(actions[2])
             #flappy_boat_pub.publish(True)
 
             # imprimi opbservações e achoes do modelo
