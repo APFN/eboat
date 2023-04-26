@@ -486,7 +486,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         # --> We will use a rescaled action space
         self.action_space = spaces.Box(low=-1,
                                        high=1,
-                                       shape=(3,),
+                                       shape=(2,),
                                        dtype=np.float32)
 
         # --> We will use a rescaled action space
@@ -531,11 +531,11 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
     def actionRescale(self, action):
         raction = np.zeros(3, dtype = np.float32)
         # # #--> Eletric propulsion [-5, 5]
-        raction[0] = action[0] * 5.0
+        # raction[0] = action[0] * 5.0
         #--> Boom angle [0, 90]
-        raction[1] = (action[1] + 1) * 45.0
+        raction[0] = (action[0] + 1) * 45.0
         #--> Rudder angle [-60, 60]
-        raction[2] = action[2] * 60.0
+        raction[1] = action[1] * 60.0
         return raction
     
     def observationRescale(self, observations):
@@ -612,12 +612,18 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
 
     def rewardFunction(self, obs, ract):
         
-        reward = ((self.DPREV - obs[0]) / self.DMAX)         
+        # reward = ((self.DPREV - obs[0]) / self.DMAX)        
         
-        # if reward > 0:
-        #     reward *= (1.0 - 0.9 * abs(obs[7]) / 5.0)
-        # else:
-        #     reward -= 0.01 * abs(obs[7])
+        ## ## usei no modelo que treinei para motor medio e motor livre
+        # # if reward > 0:
+        # #     reward *= (1.0 - 0.9 * abs(obs[7]) / 5.0)
+        # # else:
+        # #     reward -= 0.01 * abs(obs[7])
+
+        reward = ((self.DPREV - obs[0]) / self.DMAX)         
+        min_speed =  obs[3] / 4 # barco tem que andar a 1/4 da velocidade do vento         
+        if obs[2] > min_speed:  # rapido
+            reward *=2    
 
 
         # --> obsData = [distance, trajectory angle, linear velocity, aparent wind speed, aparent wind angle, boom angle, rudder angle, eletric propultion speed, roll angle]
@@ -634,11 +640,12 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
 
         ract = self.actionRescale(action) #-->SEND ACTION TO THE BOAT CONTROL INTERFACE
 
-        self.propVel_pub.publish(int(ract[0])) #comentado se motor desligado        
-        self.boomAng_pub.publish(ract[1])
-        self.rudderAng_pub.publish(ract[2])
-        #self.flappy_boat_pub.publish(True)
-        
+        # self.propVel_pub.publish(int(ract[0])) #comentado se motor ligadi      
+        self.propVel_pub.publish(int(0)) #comentado se motor desligado    
+        self.boomAng_pub.publish(ract[0])
+        self.rudderAng_pub.publish(ract[1])
+        #self.flappy_boat_pub.publish(True) #Modosem vento
+
         #-->GET OBSERVATIONS (NEXT STATE)
         observations = self.getObservations()
 
