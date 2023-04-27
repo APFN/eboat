@@ -531,9 +531,9 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
     def actionRescale(self, action):
         raction = np.zeros(3, dtype = np.float32)
         # # #--> Eletric propulsion [-5, 5]
-        # raction[0] = action[0] * 5.0
+        raction[0] = action[0] * 5.0
         #--> Boom angle [0, 90]
-        raction[0] = (action[0] + 1) * 45.0
+        #raction[0] = (action[0] + 1) * 45.0
         #--> Rudder angle [-60, 60]
         raction[1] = action[1] * 60.0
         return raction
@@ -621,9 +621,9 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         # #     reward -= 0.01 * abs(obs[7])
 
         reward = ((self.DPREV - obs[0]) / self.DMAX)         
-        min_speed =  obs[3] / 4 # barco tem que andar a 1/4 da velocidade do vento         
-        if obs[2] > min_speed:  # rapido
-            reward *=2    
+        # min_speed =  obs[3] / 4 # barco tem que andar a 1/4 da velocidade do vento         
+        # if obs[2] > min_speed:  # rapido
+        #     reward *=2    
 
 
         # --> obsData = [distance, trajectory angle, linear velocity, aparent wind speed, aparent wind angle, boom angle, rudder angle, eletric propultion speed, roll angle]
@@ -641,8 +641,8 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
         ract = self.actionRescale(action) #-->SEND ACTION TO THE BOAT CONTROL INTERFACE
 
         # self.propVel_pub.publish(int(ract[0])) #comentado se motor ligadi      
-        self.propVel_pub.publish(int(0)) #comentado se motor desligado    
-        self.boomAng_pub.publish(ract[0])
+        self.propVel_pub.publish(int(ract[0])) #comentado se motor desligado    
+        self.boomAng_pub.publish(90)
         self.rudderAng_pub.publish(ract[1])
         #self.flappy_boat_pub.publish(True) #Modosem vento
 
@@ -722,7 +722,7 @@ class GazeboOceanEboatEnvCC1(GazeboOceanEboatEnvCC):
 
         #-->SET THE ACTUATORS BACK TO THE DEFAULT SETTING
         self.propVel_pub.publish(0)
-        self.boomAng_pub.publish(0.0)
+        self.boomAng_pub.publish(90.0)
         self.rudderAng_pub.publish(0.0)
         #self.flappy_boat_pub.publish(True)
 

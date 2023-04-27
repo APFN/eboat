@@ -66,7 +66,7 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_25042023_13_05_59/eboat_ocean_8.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_27042023_13_44_04/eboat_ocean_8.zip")
     
 
     # navpath = [[0.0, 100.0, 0.5],
@@ -175,8 +175,8 @@ def main():
             #-->SEND ACTIONS TO THE CONTROL INTERFACE
             propVel_pub.publish(int(actions[0])) #com motor
             # propVel_pub.publish(int(0)) #sem motor
-            boomAng_pub.publish(actions[1])
-            rudderAng_pub.publish(actions[2])
+            boomAng_pub.publish(90)
+            rudderAng_pub.publish(actions[1])
             #flappy_boat_pub.publish(True)
 
             # imprimi opbservações e achoes do modelo
@@ -287,8 +287,10 @@ def actionRescale(action):
         #--> Rudder angle [-60, 60]
         raction[0] = action[0] * 60.0
     elif len_action == 2:
-        #--> Boom angle [0, 90]
-        raction[0] = (action[0] + 1) * 45.0
+        # #--> Boom angle [0, 90]
+        # raction[0] = (action[0] + 1) * 45.0
+        #--> Eletric propulsion [-5, 5]
+        raction[0] = action[0] * 5.0
         #--> Rudder angle [-60, 60]
         raction[1] = action[1] * 60.0
     elif len_action == 3:
