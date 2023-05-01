@@ -44,6 +44,8 @@ def wind_callback(data):
 
 def main():
 
+    global model_flappyBoat, model_onlyMotor, model_sail_freeMotor, model_sail_mediumMotor, model_onlySail, flappy_boat_pub
+
     #-->INITIALIZE ROS NODE
     rospy.init_node('ESailor', anonymous=True)
 
@@ -68,11 +70,12 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    self.model_flappyBoat = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_27042023_13_44_04/eboat_ocean_8.zip")
-    self.model_onlyMotor = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_27042023_13_44_04/eboat_ocean_8.zip")
-    self.model_sail_freeMotor = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_27042023_13_44_04/eboat_ocean_8.zip")
-    self.model_sail_mediumMotor = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_27042023_13_44_04/eboat_ocean_8.zip")
-    self.model_onlySail = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_27042023_13_44_04/eboat_ocean_8.zip")
+    
+    model_flappyBoat = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_flappyBoat_23042023_18_35_47/eboat_ocean_7.zip")
+    model_onlyMotor = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_onlyMotor_27042023_13_44_04/eboat_ocean_8.zip")
+    model_onlySail = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_onlySail_26042023_05_37_21/eboat_ocean_9.zip")
+    model_sail_freeMotor = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_sail_freeMotor_25042023_20_22_07/eboat_ocean_9.zip")
+    model_sail_mediumMotor = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_sail_mediumMotor_25042023_13_05_59/eboat_ocean_9.zip")
     
     navpath = []
     wind = []
@@ -81,16 +84,16 @@ def main():
 
     with open('/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_control/python/projects/ESailor/missionPlanner.csv') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
-        header = next(csv_reader) # discard the header
-    
-    for row in csv_reader:
-        # salvar os valores das colunas nas variáveis correspondentes
-        navpath.append([float(row[0]), float(row[1]), float(row[2])])
-        wind.append([float(row[3]), float(row[4])])
-        battery.append(int(row[5]))
-        ecoMode.append(bool(int(row[6])))
+        header = next(csv_reader) # discard the header    
+        for row in csv_reader:
+            # salvar os valores das colunas nas variáveis correspondentes
+            navpath.append([float(row[0]), float(row[1]), float(row[2])])
+            wind.append([float(row[3]), float(row[4])])
+            battery.append(int(row[5]))
+            ecoMode.append(bool(int(row[6])))
 
-
+    for i in range(len(navpath)):
+        print('navpath[{}]:'.format(i), navpath[i], 'wind[{}]:'.format(i), wind[i],'battery[{}]:'.format(i), battery[i], 'ecoMode[{}]:'.format(i), ecoMode[i] )
 
 
     #########################################################################
@@ -128,8 +131,10 @@ def main():
 
     for i in range(len(navpath)):
 
-        waypoint = navpath[i]
+        
+        print('navpath[{}]:'.format(i), navpath[i], 'wind[{}]:'.format(i), wind[i],'battery[{}]:'.format(i), battery[i], 'ecoMode[{}]:'.format(i), ecoMode[i] )
 
+        waypoint = navpath[i]
         delete_model("wayPointMarker")
         time.sleep(1)
         ipose = Pose()
@@ -170,10 +175,10 @@ def main():
 
             obs = observationRescale(observations)
 
-            actions = sailor(self , obs, battery[i], ecoMode[i])
+            actions = sailor(obs, battery[i], ecoMode[i])
 
             #-->SEND ACTIONS TO THE CONTROL INTERFACE
-            propVel_pub.publish(actions[0])
+            propVel_pub.publish(int(actions[0]))
             boomAng_pub.publish(actions[1])
             rudderAng_pub.publish(actions[2])
 
@@ -201,55 +206,74 @@ def main():
     
     pc.plot_coordinates() # Chama o método save_coordinates da instância pc
 
-def sailor(self, observations, battery, ecoMode):
+def sailor(observations, battery, ecoMode):
     # --> obsData = [distance, trajectory angle, linear velocity, aparent wind speed, aparent wind angle, boom angle, rudder angle, eletric propultion speed, roll angle]
     #               [   0    ,        1        ,       2        ,         3         ,         4         ,     5     ,      6      ,            7            ,     8     ]     
-        
+
+    #print('Wind[{}]:',observations[3], 'battery[{}]:', battery, 'ecoMode[{}]:', ecoMode)   
+
     # battery <= 10 -> critical battery  = wait battery charger
     if(battery <= 10):
+        print("battery low: waitting charge")
         actions = [0]* 3
 
     # 10 < battery <= 30 & wind == 0  -> low battery, no wind = model_flappyBoat
-    elif( 10 < battery <= 30 & observations[3] == 0):
-        predict = self.model_flappyBoat.predict(observations)
-        actions = actionRescale_flappy(predict)
-        self.flappy_boat_pub.publish(True) #flap the sail
+    elif( 10 < battery <= 30 and observations[3] <= 0.3 ):
+        print("10 < battery <= 30 & wind == 0  -> low battery, no wind = model_flappyBoat")
+        predict = model_flappyBoat.predict(observations)
+        actions = actionRescale_flappy(predict[0])
+        flappy_boat_pub.publish(True) #flap the sail
 
     # 10<battery<=30 & 0 <wind<=3  -> low battery, low wind =  model_onlySail
-    elif( 10 < battery <= 30 & 0 < observations[3] <= 3):
-        predict =  self.model_onlySail.predict(observations)
-        actions = actionRescale_onlySail(predict)
+    elif( 10 < battery <= 30 and 0 < observations[3] <= 3):
+        print("10<battery<=30 & 0 <wind<=3  -> low battery, low wind =  model_onlySail")
+        predict =  model_onlySail.predict(observations)
+        actions = actionRescale_onlySail(predict[0])
    
     # 10<battery<=30 & 3 <wind & ecoMode==True -> low battery, wind ok, ecomode:True  =   model_onlySail
-    elif( 10 < battery <= 30 & 3 < observations[3]  & ecoMode == True):
-        predict =  self.model_onlySail.predict(observations)
-        actions = actionRescale_onlySail(predict)
+    elif( 10 < battery <= 30 and 3 < observations[3]  and ecoMode == True):
+        print("10<battery<=30 & 3 <wind & ecoMode==True -> low battery, wind ok, ecomode:True  =   model_onlySail")
+        predict =  model_onlySail.predict(observations)
+        actions = actionRescale_onlySail(predict[0])
 
     # 10<battery<=30 & 3 <wind & ecoMode==False -> low battery, wind ok, ecomode:False  =  model_sail_mediumMotor
-    elif( 10 < battery <= 30 & 3 < observations[3]  & ecoMode == False):
-        predict  =  self.model_sail_mediumMotor.predict(observations)
-        actions = actionRescale_SailAndMotor(predict)
+    elif( 10 < battery <= 30 and 3 < observations[3]  and ecoMode == False):
+        print("10<battery<=30 & 3 <wind & ecoMode==False -> low battery, wind ok, ecomode:False  =  model_sail_mediumMotor")
+        predict  =  model_sail_mediumMotor.predict(observations)
+        actions = actionRescale_SailAndMotor(predict[0])
 
     # 30<battery & wind==0 & ecoMode==True -> battery ok, no wind, ecomode:True = model_flappyBoat
-    elif( 30 < battery &  observations[3] == 0  & ecoMode == True):
-        predict = self.model_flappyBoat.predict(observations)
-        actions = actionRescale_flappy(predict)
-        self.flappy_boat_pub.publish(True) #flap the sail
+    elif( 30 < battery and  observations[3] <= 0.3  and ecoMode == True):
+        print("30<battery & wind==0 & ecoMode==True -> battery ok, no wind, ecomode:True = model_flappyBoat")
+        predict = model_flappyBoat.predict(observations)
+        actions = actionRescale_flappy(predict[0])
+        flappy_boat_pub.publish(True) #flap the sail
  
     # 30<battery & wind==0 & ecoMode==True -> battery ok, no wind, ecomode:False = model_onlyMotor
-    elif( 30 < battery &  observations[3] == 0  & ecoMode == False):
-        predict = self.model_onlyMotor.predict(observations)
-        actions = actionRescale_onlyMotor(predict)
+    elif( 30 < battery and  observations[3] <= 0.3  and ecoMode == False):
+        print("30<battery & wind==0 & ecoMode==True -> battery ok, no wind, ecomode:False = model_onlyMotor")
+        predict = model_onlyMotor.predict(observations)
+        print("Raw actions:", predict[0])
+        actions = actionRescale_onlyMotor(predict[0])
 
     # 30<battery & 0 <wind<=3 -> battery ok,  low wind = model_sail_freeMotor
-    elif( 30 < battery &  0 < observations[3] <= 3 ):
-        predict = self.model_sail_freeMotor.predict(observations)
-        actions = actionRescale_SailAndMotor(predict)
+    elif( 30 < battery and  0 < observations[3] <= 3 ):
+        print("30<battery & 0 <wind<=3 -> battery ok,  low wind = model_sail_freeMotor")
+        predict = model_sail_freeMotor.predict(observations)
+        actions = actionRescale_SailAndMotor(predict[0])
 
     # 30<battery & 3 <wind -> battery ok, wind ok = model_onlySail
-    elif( 30 < battery & 3 < observations[3]):
-        predict = self.model_onlySail.predict(observations)
-        actions = actionRescale_onlySail(predict)
+    elif( 30 < battery and 3 < observations[3]):
+        print("30<battery & 3 <wind -> battery ok, wind ok = model_onlySail")
+        predict = model_onlySail.predict(observations)
+        actions = actionRescale_onlySail(predict[0])
+
+    else:
+        print("No behavior detected")
+        actions = [0]* 3
+
+
+    
 
     return actions
 
@@ -342,12 +366,13 @@ def actionRescale_onlySail(action): #only have 2 actions: sail and rudder
 
 def actionRescale_onlyMotor(action):  #only have 2 actions: motor and rudder
     raction = np.zeros(3, dtype = np.float32)
-    #--> Eletric propulsion [-5, 5]
-    raction[0] = int(np.floor(action[0]) * 5.0)
+    # #--> Eletric propulsion [-5, 5]
+    raction[0] = int(np.floor(action[0] * 5.0))
     #--> Boom angle [0, 90]
     raction[1] = 90
     #--> Rudder angle [-60, 60]
     raction[2] = action[1] * 60.0  
+
     return raction
 
 def actionRescale_flappy(action): #only have 1 actions: rudder
@@ -364,7 +389,7 @@ def actionRescale_flappy(action): #only have 1 actions: rudder
 def actionRescale_SailAndMotor(action): # have 3 actions: motor, sail and rudder
     raction = np.zeros(3, dtype = np.float32)
     # #--> Eletric propulsion [-5, 5]
-    raction[0] = int(np.floor(action[0]) * 5.0)
+    raction[0] = int(np.floor(action[0] * 5.0))
     #--> Boom angle [0, 90]
     raction[1] = (action[1] + 1) * 45.0
     #--> Rudder angle [-60, 60]
