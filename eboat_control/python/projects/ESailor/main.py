@@ -51,6 +51,7 @@ def main():
     propVel_pub   = rospy.Publisher("/eboat/control_interface/propulsion", Int16  , queue_size=5)
     wind_pub      = rospy.Publisher("/eboat/atmosferic_control/wind"      , Float32MultiArray  , queue_size=5)
     flappy_boat_pub = rospy.Publisher('/eboat/control_interface/flappy_boat', Bool, queue_size=10)
+    wind_pub = rospy.Publisher("/eboat/atmosferic_control/wind", Point, queue_size=5)
 
     
     #-->ROS SERVICES
@@ -66,7 +67,7 @@ def main():
 
 
     #-->LOAD AGENT USING STABLE-BASELINES3
-    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/model1_27042023_13_44_04/eboat_ocean_8.zip")
+    model = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_onlySail_22042023_13_27_18/eboat_ocean_9.zip")
     
 
     # navpath = [[0.0, 100.0, 0.5],
@@ -170,12 +171,13 @@ def main():
             #-->PREDICT ACTIONS
             predict  =  model.predict(obs)
             actions = actionRescale(predict[0])
-            actions[0] = np.floor(actions[0]) #com motor
+            
+            #actions[0] = np.floor(actions[0]) #com motor
 
             #-->SEND ACTIONS TO THE CONTROL INTERFACE
-            propVel_pub.publish(int(actions[0])) #com motor
+            propVel_pub.publish(int(0)) #com motor
             # propVel_pub.publish(int(0)) #sem motor
-            boomAng_pub.publish(90)
+            boomAng_pub.publish(actions[0])
             rudderAng_pub.publish(actions[1])
             #flappy_boat_pub.publish(True)
 
@@ -287,10 +289,10 @@ def actionRescale(action):
         #--> Rudder angle [-60, 60]
         raction[0] = action[0] * 60.0
     elif len_action == 2:
-        # #--> Boom angle [0, 90]
-        # raction[0] = (action[0] + 1) * 45.0
-        #--> Eletric propulsion [-5, 5]
-        raction[0] = action[0] * 5.0
+        #--> Boom angle [0, 90]
+        raction[0] = (action[0] + 1) * 45.0
+        # #--> Eletric propulsion [-5, 5]
+        # raction[0] = action[0] * 5.0
         #--> Rudder angle [-60, 60]
         raction[1] = action[1] * 60.0
     elif len_action == 3:
