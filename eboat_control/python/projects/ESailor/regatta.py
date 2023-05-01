@@ -23,7 +23,7 @@ import csv
 set_state     = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
 
 def wind_callback(data):
-    wind_x, wind_y = map(float, data.data)    
+    wind_x, wind_y = map(float, data.data[:2])  
     model_state = ModelState()
     model_state.model_name = "wind_arrow" 
     model_state.pose.position.x = 0
@@ -50,11 +50,11 @@ def main():
     rospy.init_node('ESailor', anonymous=True)
 
     #-->SUBSCRIBE TO PUBLISH ON ROS TOPICS
-    boomAng_pub   = rospy.Publisher("/eboat/control_interface/sail"       , Float32, queue_size=5)
-    rudderAng_pub = rospy.Publisher("/eboat/control_interface/rudder"     , Float32, queue_size=5)
-    propVel_pub   = rospy.Publisher("/eboat/control_interface/propulsion", Int16  , queue_size=5)
-    wind_pub      = rospy.Publisher("/eboat/atmosferic_control/wind"      , Float32MultiArray  , queue_size=5)
-    flappy_boat_pub = rospy.Publisher('/eboat/control_interface/flappy_boat', Bool, queue_size=10)
+    boomAng_pub     = rospy.Publisher("/eboat/control_interface/sail"       , Float32, queue_size=5)
+    rudderAng_pub   = rospy.Publisher("/eboat/control_interface/rudder"     , Float32, queue_size=5)
+    propVel_pub     = rospy.Publisher("/eboat/control_interface/propulsion" , Int16  , queue_size=5)
+    wind_pub        = rospy.Publisher("/eboat/atmosferic_control/wind"      , Point  , queue_size=5)
+    flappy_boat_pub = rospy.Publisher('/eboat/control_interface/flappy_boat', Bool   , queue_size=10)
 
     
     #-->ROS SERVICES
@@ -134,6 +134,12 @@ def main():
         
         print('navpath[{}]:'.format(i), navpath[i], 'wind[{}]:'.format(i), wind[i],'battery[{}]:'.format(i), battery[i], 'ecoMode[{}]:'.format(i), ecoMode[i] )
 
+        windConfig = np.array([0, 0, 0.0], dtype=np.float32)
+        windConfig[:3] = [wind[i][0], wind[i][1], 0]
+        wind_pub.publish(Point(windConfig[0],windConfig[1],windConfig[2]))
+
+        
+
         waypoint = navpath[i]
         delete_model("wayPointMarker")
         time.sleep(1)
@@ -174,8 +180,8 @@ def main():
             pc.save_eboat_coordinates() # Chama o método save_coordinates da instância pc
 
             obs = observationRescale(observations)
-
-            actions = sailor(obs, battery[i], ecoMode[i])
+            anemometer = observations[3]
+            actions = sailor(obs, anemometer, battery[i], ecoMode[i])
 
             #-->SEND ACTIONS TO THE CONTROL INTERFACE
             propVel_pub.publish(int(actions[0]))
@@ -206,64 +212,49 @@ def main():
     
     pc.plot_coordinates() # Chama o método save_coordinates da instância pc
 
-def sailor(observations, battery, ecoMode):
+def sailor(observations, wind, battery, ecoMode):
     # --> obsData = [distance, trajectory angle, linear velocity, aparent wind speed, aparent wind angle, boom angle, rudder angle, eletric propultion speed, roll angle]
     #               [   0    ,        1        ,       2        ,         3         ,         4         ,     5     ,      6      ,            7            ,     8     ]     
 
-    #print('Wind[{}]:',observations[3], 'battery[{}]:', battery, 'ecoMode[{}]:', ecoMode)   
+    print("Battery[{}] || Wind[{}] || ecoMode[{}]".format(battery, wind, ecoMode))  
 
-    # battery <= 10 -> critical battery  = wait battery charger
     if(battery <= 10):
-        print("battery low: waitting charge")
+        print("battery <= 10 -> critical battery  = wait battery charger")
         actions = [0]* 3
 
-    # 10 < battery <= 30 & wind == 0  -> low battery, no wind = model_flappyBoat
-    elif( 10 < battery <= 30 and observations[3] <= 0.3 ):
+    elif( 10 < battery <= 30 and wind <= 0.3 ):
         print("10 < battery <= 30 & wind == 0  -> low battery, no wind = model_flappyBoat")
         predict = model_flappyBoat.predict(observations)
         actions = actionRescale_flappy(predict[0])
         flappy_boat_pub.publish(True) #flap the sail
 
-    # 10<battery<=30 & 0 <wind<=3  -> low battery, low wind =  model_onlySail
-    elif( 10 < battery <= 30 and 0 < observations[3] <= 3):
-        print("10<battery<=30 & 0 <wind<=3  -> low battery, low wind =  model_onlySail")
+    elif( 10 < battery <= 30 and 0.3 < wind and ecoMode == True):
+        print("10<battery<=30 & 0.3 < wind -> low battery, wind low or ok, ecomode:True =  model_onlySail")
         predict =  model_onlySail.predict(observations)
         actions = actionRescale_onlySail(predict[0])
    
-    # 10<battery<=30 & 3 <wind & ecoMode==True -> low battery, wind ok, ecomode:True  =   model_onlySail
-    elif( 10 < battery <= 30 and 3 < observations[3]  and ecoMode == True):
-        print("10<battery<=30 & 3 <wind & ecoMode==True -> low battery, wind ok, ecomode:True  =   model_onlySail")
-        predict =  model_onlySail.predict(observations)
-        actions = actionRescale_onlySail(predict[0])
-
-    # 10<battery<=30 & 3 <wind & ecoMode==False -> low battery, wind ok, ecomode:False  =  model_sail_mediumMotor
-    elif( 10 < battery <= 30 and 3 < observations[3]  and ecoMode == False):
-        print("10<battery<=30 & 3 <wind & ecoMode==False -> low battery, wind ok, ecomode:False  =  model_sail_mediumMotor")
-        predict  =  model_sail_mediumMotor.predict(observations)
+    elif( 10 < battery <= 30 and 0.3 < wind  and ecoMode == False):
+        print("10<battery<=30 & 3 <wind & ecoMode==True -> low battery, wind ok, ecomode:False = model_sail_mediumMotor")
+        predict =  model_sail_mediumMotor.predict(observations)
         actions = actionRescale_SailAndMotor(predict[0])
 
-    # 30<battery & wind==0 & ecoMode==True -> battery ok, no wind, ecomode:True = model_flappyBoat
-    elif( 30 < battery and  observations[3] <= 0.3  and ecoMode == True):
-        print("30<battery & wind==0 & ecoMode==True -> battery ok, no wind, ecomode:True = model_flappyBoat")
+    elif( 30 < battery and  wind <= 0.3  and ecoMode == True):
+        print("30<battery & wind <= 0.3 & ecoMode==True -> battery ok, no wind, ecomode:True = model_flappyBoat")
         predict = model_flappyBoat.predict(observations)
         actions = actionRescale_flappy(predict[0])
         flappy_boat_pub.publish(True) #flap the sail
- 
-    # 30<battery & wind==0 & ecoMode==True -> battery ok, no wind, ecomode:False = model_onlyMotor
-    elif( 30 < battery and  observations[3] <= 0.3  and ecoMode == False):
-        print("30<battery & wind==0 & ecoMode==True -> battery ok, no wind, ecomode:False = model_onlyMotor")
+
+    elif( 30 < battery and  wind <= 3  and ecoMode == False):
+        print("30<battery & wind<=3 & ecoMode==False -> battery ok, no wind or low , ecomode:False = model_onlyMotor")
         predict = model_onlyMotor.predict(observations)
-        print("Raw actions:", predict[0])
         actions = actionRescale_onlyMotor(predict[0])
 
-    # 30<battery & 0 <wind<=3 -> battery ok,  low wind = model_sail_freeMotor
-    elif( 30 < battery and  0 < observations[3] <= 3 ):
-        print("30<battery & 0 <wind<=3 -> battery ok,  low wind = model_sail_freeMotor")
+    elif( 30 < battery and  0.3 < wind <= 3  and ecoMode == True):
+        print("30<battery & 0.3 <wind<=3 & ecoMode==True -> battery ok, low wind, ecomode:True = model_sail_freeMotor")
         predict = model_sail_freeMotor.predict(observations)
         actions = actionRescale_SailAndMotor(predict[0])
 
-    # 30<battery & 3 <wind -> battery ok, wind ok = model_onlySail
-    elif( 30 < battery and 3 < observations[3]):
+    elif( 30 < battery and 3 < wind):
         print("30<battery & 3 <wind -> battery ok, wind ok = model_onlySail")
         predict = model_onlySail.predict(observations)
         actions = actionRescale_onlySail(predict[0])
