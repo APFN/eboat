@@ -8,10 +8,10 @@ import numpy as np
 
                    
                    
-coordinates = [[10, 10], 
-[800, 870], 
-[1500, 0], 
-[800, -870]]
+coordinates = [[-800, 10], 
+[0, 800], 
+[800, 0], 
+[0, -800]]
 
 
                    
@@ -81,8 +81,8 @@ for i in range(1, len(path)):
             x = p1[0] + (p2[0] - p1[0]) * j / n_points
             y = p1[1] + (p2[1] - p1[1]) * j / n_points
             new_path.append((x, y))
+            print(x, ",", y)
         new_path.append(p2)
-
 
 # Imprimir o caminho em um gráfico
 fig, ax = plt.subplots()

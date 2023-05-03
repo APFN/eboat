@@ -46,8 +46,8 @@ class PlotCoordinates:
     def plot_coordinates(self):
         # Configura o plot
         fig, ax = plt.subplots()        
-        ax.set_xlim(-100, 100)
-        ax.set_ylim(-100, 200)
+        # ax.set_xlim(-100, 100)
+        # ax.set_ylim(-100, 200)
         ax.set_aspect('equal', adjustable='box')
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
