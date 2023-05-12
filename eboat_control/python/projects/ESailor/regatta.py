@@ -75,14 +75,14 @@ def main():
     model_onlyMotor = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_onlyMotor_27042023_13_44_04/eboat_ocean_8.zip")
     model_onlySail = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_onlySail_26042023_05_37_21/eboat_ocean_9.zip")
     model_sail_freeMotor = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_sail_freeMotor_25042023_20_22_07/eboat_ocean_8.zip")
-    model_sail_mediumMotor = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_sail_mediumMotor_25042023_13_05_59/eboat_ocean_8.zip")
+    model_sail_mediumMotor = PPO.load(f"/home/alvaro/eboat_ws/src/eboat_gz_1/models/PPO/0_sail_mediumMotor_25042023_13_05_59/eboat_ocean_3.zip")
     
     navpath = []
     wind = []
     battery = []
     ecoMode = []
 
-    with open('/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_control/python/projects/ESailor/missionPlanner.csv') as csv_file:
+    with open('/home/alvaro/eboat_ws/src/eboat_gz_1/eboat_control/python/projects/ESailor/missionPlanner_guanabaraBay.csv') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         header = next(csv_reader) # discard the header    
         for row in csv_reader:
